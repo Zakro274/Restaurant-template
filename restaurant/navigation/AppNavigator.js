@@ -8,6 +8,8 @@ import HomeScreen from "../screens/HomeScreen";
 import DiscoverScreen from "../screens/DiscoverScreen";
 import ScanScreen from "../screens/ScanScreen";
 import ItemDescriptionScreen from "../screens/ItemDescriptionScreen";
+import ProfileScreen from "../screens/ProfileScreen";
+import PlaceholderScreen from "../screens/PlaceholderScreen";
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -18,6 +20,10 @@ const HomeStack = () => {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="HomeMain" component={HomeScreen} />
       <Stack.Screen name="ItemDescription" component={ItemDescriptionScreen} />
+      <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="OrderHistory" component={PlaceholderScreen} />
+      <Stack.Screen name="PaymentMethods" component={PlaceholderScreen} />
+      <Stack.Screen name="Addresses" component={PlaceholderScreen} />
     </Stack.Navigator>
   );
 };

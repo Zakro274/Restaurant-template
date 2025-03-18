@@ -103,6 +103,13 @@ const HomeScreen = ({ navigation }) => {
           <TouchableOpacity style={styles.iconButton}>
             <Icon name="cart-outline" size={24} color="#333" />
           </TouchableOpacity>
+          {/* Profile Button */}
+          <TouchableOpacity 
+            style={styles.iconButton}
+            onPress={() => navigation.navigate('Profile')}
+          >
+            <Icon name="person-outline" size={24} color="#333" />
+          </TouchableOpacity>
         </View>
       </View>
 
