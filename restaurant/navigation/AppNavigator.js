@@ -10,6 +10,7 @@ import ScanScreen from "../screens/ScanScreen";
 import ItemDescriptionScreen from "../screens/ItemDescriptionScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import PlaceholderScreen from "../screens/PlaceholderScreen";
+import CartScreen from "../screens/CartScreen"; // Import the new CartScreen
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -21,6 +22,7 @@ const HomeStack = () => {
       <Stack.Screen name="HomeMain" component={HomeScreen} />
       <Stack.Screen name="ItemDescription" component={ItemDescriptionScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="Cart" component={CartScreen} />
       <Stack.Screen name="OrderHistory" component={PlaceholderScreen} />
       <Stack.Screen name="PaymentMethods" component={PlaceholderScreen} />
       <Stack.Screen name="Addresses" component={PlaceholderScreen} />
@@ -34,6 +36,7 @@ const DiscoverStack = () => {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="DiscoverMain" component={DiscoverScreen} />
       <Stack.Screen name="ItemDescription" component={ItemDescriptionScreen} />
+      <Stack.Screen name="Cart" component={CartScreen} />
     </Stack.Navigator>
   );
 };

@@ -100,7 +100,11 @@ const HomeScreen = ({ navigation }) => {
           <TouchableOpacity style={styles.iconButton}>
             <Icon name="notifications-outline" size={24} color="#333" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
+          {/* Cart Button - Updated to navigate to Cart screen */}
+          <TouchableOpacity 
+            style={styles.iconButton}
+            onPress={() => navigation.navigate('Cart')}
+          >
             <Icon name="cart-outline" size={24} color="#333" />
           </TouchableOpacity>
           {/* Profile Button */}
@@ -228,19 +232,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 20, // Reduced from 15 to 10
+    paddingVertical: 20,
   },
   headerRight: {
     flexDirection: 'row',
   },
   iconButton: {
-    width: 38, // Reduced from 40 to 38
-    height: 38, // Reduced from 40 to 38
-    borderRadius: 19, // Adjusted to half of width/height
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: '#F0F0F0',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 8, // Reduced from 10 to 8
+    marginLeft: 8,
   },
   greeting: {
     fontSize: 22,
@@ -250,7 +254,7 @@ const styles = StyleSheet.create({
   subGreeting: {
     fontSize: 14,
     color: '#666',
-    marginTop: 2, // Reduced from 4 to 2
+    marginTop: 2,
   },
   banner: {
     height: 180,
