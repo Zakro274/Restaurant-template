@@ -27,9 +27,9 @@ const ProfileScreen = ({ navigation }) => {
   });
 
   // Settings states
-  const [notifications, setNotifications] = useState(true);
+  const [notifications, setNotifications] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const [locationServices, setLocationServices] = useState(true);
+  const [locationServices, setLocationServices] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [tempUserData, setTempUserData] = useState({ ...userData });
 

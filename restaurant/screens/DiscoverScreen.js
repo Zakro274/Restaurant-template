@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -7,13 +7,17 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  FlatList
+  FlatList,
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 
 const DiscoverScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [filteredDishes, setFilteredDishes] = useState([]);
+  const [activeCategory, setActiveCategory] = useState(null);
+  const [isSearching, setIsSearching] = useState(false);
 
   const categories = [
     { id: 1, name: 'Pizza', icon: 'pizza-outline', color: '#FF7E67' },
@@ -35,6 +39,7 @@ const DiscoverScreen = ({ navigation }) => {
       reviews: 127,
       calories: 275,
       prepTime: '15-20 min',
+      category: 'Pizza',
       ingredients: [
         'Fresh dough', 'Tomato sauce', 'Mozzarella cheese', 'Pepperoni',
         'Oregano', 'Olive oil'
@@ -52,6 +57,7 @@ const DiscoverScreen = ({ navigation }) => {
       reviews: 96,
       calories: 420,
       prepTime: '10-12 min',
+      category: 'Burgers',
       ingredients: [
         'Beef patty', 'Sesame bun', 'Cheddar cheese', 'Lettuce',
         'Tomato', 'Pickles', 'Special sauce'
@@ -69,6 +75,7 @@ const DiscoverScreen = ({ navigation }) => {
       reviews: 72,
       calories: 180,
       prepTime: '5-8 min',
+      category: 'Salads',
       ingredients: [
         'Romaine lettuce', 'Croutons', 'Parmesan cheese', 'Caesar dressing',
         'Black pepper', 'Lemon juice'
@@ -86,6 +93,7 @@ const DiscoverScreen = ({ navigation }) => {
       reviews: 84,
       calories: 410,
       prepTime: '12-15 min',
+      category: 'Pasta',
       ingredients: [
         'Fettuccine pasta', 'Heavy cream', 'Butter', 'Parmesan cheese',
         'Garlic', 'Black pepper', 'Parsley'
@@ -93,14 +101,113 @@ const DiscoverScreen = ({ navigation }) => {
       allergens: ['Wheat', 'Dairy'],
       spicyLevel: 'Mild'
     },
+    {
+      id: 5,
+      name: 'Chocolate Cake',
+      description: 'Rich chocolate cake with ganache',
+      price: '$7.99',
+      image: require('../assets/placeholder-pizza.jpg'), // Replace with dessert image
+      rating: 4.9,
+      reviews: 103,
+      calories: 380,
+      prepTime: '5 min',
+      category: 'Desserts',
+      ingredients: [
+        'Chocolate', 'Flour', 'Sugar', 'Eggs', 'Butter', 'Vanilla'
+      ],
+      allergens: ['Wheat', 'Dairy', 'Egg'],
+      spicyLevel: 'None'
+    },
+    {
+      id: 6,
+      name: 'Strawberry Milkshake',
+      description: 'Creamy milkshake with fresh strawberries',
+      price: '$5.99',
+      image: require('../assets/placeholder-pasta.jpg'), // Replace with drink image
+      rating: 4.7,
+      reviews: 68,
+      calories: 320,
+      prepTime: '5 min',
+      category: 'Drinks',
+      ingredients: [
+        'Milk', 'Ice cream', 'Fresh strawberries', 'Whipped cream'
+      ],
+      allergens: ['Dairy'],
+      spicyLevel: 'None'
+    },
+    {
+      id: 7,
+      name: 'Margherita Pizza',
+      description: 'Classic Italian pizza with tomato, mozzarella, and basil',
+      price: '$11.99',
+      image: require('../assets/placeholder-pizza.jpg'),
+      rating: 4.6,
+      reviews: 112,
+      calories: 260,
+      prepTime: '15-20 min',
+      category: 'Pizza',
+      ingredients: [
+        'Fresh dough', 'Tomato sauce', 'Fresh mozzarella', 'Basil leaves',
+        'Olive oil', 'Salt'
+      ],
+      allergens: ['Wheat', 'Dairy'],
+      spicyLevel: 'Mild'
+    }
   ];
 
+  // Filter dishes based on search query and active category
+  useEffect(() => {
+    setIsSearching(true);
+    
+    // Simulate a slight delay for search to feel more natural
+    const searchTimer = setTimeout(() => {
+      const filtered = popularDishes.filter(dish => {
+        const matchesSearch = searchQuery.trim() === '' || 
+          dish.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          dish.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          dish.ingredients.some(ingredient => 
+            ingredient.toLowerCase().includes(searchQuery.toLowerCase())
+          );
+        
+        const matchesCategory = !activeCategory || 
+          dish.category === activeCategory;
+        
+        return matchesSearch && matchesCategory;
+      });
+      
+      setFilteredDishes(filtered);
+      setIsSearching(false);
+    }, 500);
+    
+    return () => clearTimeout(searchTimer);
+  }, [searchQuery, activeCategory]);
+
+  const handleCategoryPress = (categoryName) => {
+    if (activeCategory === categoryName) {
+      // If tapping the already active category, deselect it
+      setActiveCategory(null);
+    } else {
+      setActiveCategory(categoryName);
+    }
+  };
+
   const renderCategoryItem = ({ item }) => (
-    <TouchableOpacity style={styles.categoryItem}>
+    <TouchableOpacity 
+      style={[
+        styles.categoryItem,
+        activeCategory === item.name && styles.activeCategoryItem
+      ]}
+      onPress={() => handleCategoryPress(item.name)}
+    >
       <View style={[styles.categoryIcon, { backgroundColor: item.color }]}>
         <Icon name={item.icon} size={24} color="#FFF" />
       </View>
-      <Text style={styles.categoryName}>{item.name}</Text>
+      <Text style={[
+        styles.categoryName,
+        activeCategory === item.name && styles.activeCategoryName
+      ]}>
+        {item.name}
+      </Text>
     </TouchableOpacity>
   );
 
@@ -130,6 +237,17 @@ const DiscoverScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
+  const renderEmptyResult = () => (
+    <View style={styles.emptyResultContainer}>
+      <Icon name="search-outline" size={60} color="#CCC" />
+      <Text style={styles.emptyResultTitle}>No results found</Text>
+      <Text style={styles.emptyResultText}>
+        We couldn't find any dishes matching your search.
+        Try a different keyword or category.
+      </Text>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -147,6 +265,8 @@ const DiscoverScreen = ({ navigation }) => {
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholderTextColor="#999"
+            returnKeyType="search"
+            autoCapitalize="none"
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
@@ -154,7 +274,13 @@ const DiscoverScreen = ({ navigation }) => {
             </TouchableOpacity>
           )}
         </View>
-        <TouchableOpacity style={styles.filterButton}>
+        <TouchableOpacity 
+          style={styles.filterButton}
+          onPress={() => {
+            // Reset category filter
+            setActiveCategory(null);
+          }}
+        >
           <Icon name="options-outline" size={20} color="#333" />
         </TouchableOpacity>
       </View>
@@ -173,22 +299,38 @@ const DiscoverScreen = ({ navigation }) => {
           />
         </View>
 
-        {/* Popular Dishes */}
+        {/* Results Section */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Popular Dishes</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAllText}>See All</Text>
-            </TouchableOpacity>
+            <Text style={styles.sectionTitle}>
+              {searchQuery.trim() !== '' ? 'Search Results' : 'Popular Dishes'}
+              {activeCategory ? ` • ${activeCategory}` : ''}
+            </Text>
+            
+            {!searchQuery && !activeCategory && (
+              <TouchableOpacity>
+                <Text style={styles.seeAllText}>See All</Text>
+              </TouchableOpacity>
+            )}
           </View>
-          <FlatList
-            data={popularDishes}
-            renderItem={renderDishItem}
-            keyExtractor={(item) => item.id.toString()}
-            showsVerticalScrollIndicator={false}
-            scrollEnabled={false}
-            contentContainerStyle={styles.dishesList}
-          />
+          
+          {isSearching ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#E63946" />
+              <Text style={styles.loadingText}>Searching...</Text>
+            </View>
+          ) : filteredDishes.length > 0 ? (
+            <FlatList
+              data={filteredDishes}
+              renderItem={renderDishItem}
+              keyExtractor={(item) => item.id.toString()}
+              showsVerticalScrollIndicator={false}
+              scrollEnabled={false}
+              contentContainerStyle={styles.dishesList}
+            />
+          ) : (
+            renderEmptyResult()
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -281,6 +423,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 5,
     width: 80,
   },
+  activeCategoryItem: {
+    transform: [{ scale: 1.05 }],
+  },
   categoryIcon: {
     width: 60,
     height: 60,
@@ -298,6 +443,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#333',
     textAlign: 'center',
+  },
+  activeCategoryName: {
+    fontWeight: 'bold',
+    color: '#E63946',
   },
   dishesList: {
     paddingHorizontal: 20,
@@ -367,6 +516,32 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingContainer: {
+    paddingVertical: 30,
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: '#666',
+  },
+  emptyResultContainer: {
+    padding: 30,
+    alignItems: 'center',
+  },
+  emptyResultTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 15,
+    marginBottom: 8,
+  },
+  emptyResultText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });
 

@@ -17,7 +17,7 @@ const { width } = Dimensions.get('window');
 const HomeScreen = ({ navigation }) => {
   const [activeCategory, setActiveCategory] = useState('All');
 
-  const categories = ['All', 'Popular', 'Pizza', 'Burgers', 'Pasta', 'Desserts'];
+  // const categories = ['All', 'Popular', 'Pizza', 'Burgers', 'Pasta', 'Desserts'];
   
   const featuredItems = [
     {
@@ -97,9 +97,9 @@ const HomeScreen = ({ navigation }) => {
           {/* <Text style={styles.subGreeting}>What would you like to eat today?</Text> */}
         </View>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconButton}>
+          {/* <TouchableOpacity style={styles.iconButton}>
             <Icon name="notifications-outline" size={24} color="#333" />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
           {/* Cart Button - Updated to navigate to Cart screen */}
           <TouchableOpacity 
             style={styles.iconButton}
@@ -136,7 +136,7 @@ const HomeScreen = ({ navigation }) => {
         </TouchableOpacity>
 
         {/* Categories */}
-        <View style={styles.categoriesContainer}>
+        {/* <View style={styles.categoriesContainer}>
           <Text style={styles.sectionTitle}>Categories</Text>
           <ScrollView 
             horizontal 
@@ -163,7 +163,7 @@ const HomeScreen = ({ navigation }) => {
               </TouchableOpacity>
             ))}
           </ScrollView>
-        </View>
+        </View> */}
 
         {/* Featured Items */}
         <View style={styles.menuContainer}>
