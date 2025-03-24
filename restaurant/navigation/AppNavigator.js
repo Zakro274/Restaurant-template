@@ -8,11 +8,12 @@ import HomeScreen from "../screens/HomeScreen";
 import DiscoverScreen from "../screens/DiscoverScreen";
 import ScanScreen from "../screens/ScanScreen";
 import ItemDescriptionScreen from "../screens/ItemDescriptionScreen";
-import ProfileScreen from "../screens/ProfileScreen";
+import ProfileScreen from "../screens/ProfileScreen"; // This will be replaced with our modified one
 import PlaceholderScreen from "../screens/PlaceholderScreen";
 import CartScreen from "../screens/CartScreen";
 import SpecialOfferScreen from "../screens/SpecialOfferScreen";
 import PromotionDetailScreen from "../screens/PromotionDetailScreen";
+import LoginScreen from "../screens/LoginScreen"; // Import the new LoginScreen
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -24,6 +25,7 @@ const HomeStack = () => {
       <Stack.Screen name="HomeMain" component={HomeScreen} />
       <Stack.Screen name="ItemDescription" component={ItemDescriptionScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Cart" component={CartScreen} />
       <Stack.Screen name="OrderHistory" component={PlaceholderScreen} />
       <Stack.Screen name="PaymentMethods" component={PlaceholderScreen} />

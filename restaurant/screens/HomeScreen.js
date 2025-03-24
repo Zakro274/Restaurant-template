@@ -11,11 +11,13 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/Ionicons";
+import { useAuth } from '../context/AuthContext';
 
 const { width } = Dimensions.get("window");
 
 const HomeScreen = ({ navigation }) => {
   const [activeCategory, setActiveCategory] = useState("All");
+  const { isLoggedIn, userData } = useAuth();
 
   const categories = [
     "All",
@@ -126,7 +128,9 @@ const HomeScreen = ({ navigation }) => {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Hello, Guest!</Text>
+          <Text style={styles.greeting}>
+            {isLoggedIn ? `Hello, ${userData.name.split(' ')[0]}!` : 'Hello, Guest!'}
+          </Text>
           <Text style={styles.subGreeting}>
             What would you like to eat today?
           </Text>

@@ -12,31 +12,22 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useAuth } from '../context/AuthContext';
 
 const ProfileScreen = ({ navigation }) => {
-  // Sample user data - in a real app, this would come from authentication
-  const [userData, setUserData] = useState({
-    name: 'John Doe',
-    email: 'john.doe@example.com',
-    phone: '+1 (555) 123-4567',
-    address: '123 Main St, Anytown, USA',
-    profileImage: require('../assets/placeholder-profile.jpg'), // You'll need to add this asset
-    favoriteItems: 3,
-    pastOrders: 12,
-    paymentMethods: 2
-  });
+  const { isLoggedIn, userData, logout } = useAuth();
 
-  // Settings states
+  // State for logged-in user settings
   const [notifications, setNotifications] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [locationServices, setLocationServices] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [tempUserData, setTempUserData] = useState({ ...userData });
+  const [tempUserData, setTempUserData] = useState(userData || {});
 
   const toggleEditMode = () => {
     if (editMode) {
       // Save changes
-      setUserData({...tempUserData});
+      // In a real app, you would update userData in AuthContext
       Alert.alert('Success', 'Profile updated successfully!');
     }
     setEditMode(!editMode);
@@ -49,7 +40,7 @@ const ProfileScreen = ({ navigation }) => {
     });
   };
 
-  const signOut = () => {
+  const handleSignOut = () => {
     Alert.alert(
       'Sign Out',
       'Are you sure you want to sign out?',
@@ -61,7 +52,7 @@ const ProfileScreen = ({ navigation }) => {
         {
           text: 'Sign Out',
           onPress: () => {
-            // Handle sign out logic here
+            logout();
             Alert.alert('Signed Out', 'You have been signed out successfully');
           },
           style: 'destructive'
@@ -70,7 +61,29 @@ const ProfileScreen = ({ navigation }) => {
     );
   };
 
-  // Profile sections
+  // Render the not logged in state
+  const renderNotLoggedIn = () => (
+    <View style={styles.notLoggedInContainer}>
+      <Icon name="person-circle-outline" size={120} color="#E0E0E0" />
+      <Text style={styles.notLoggedInTitle}>You're not signed in</Text>
+      <Text style={styles.notLoggedInSubtitle}>
+        Sign in to view your profile, track orders, and manage your account settings.
+      </Text>
+      <TouchableOpacity 
+        style={styles.signInButton}
+        onPress={() => navigation.navigate('Login')}
+      >
+        <Text style={styles.signInButtonText}>Sign In</Text>
+      </TouchableOpacity>
+      <TouchableOpacity 
+        style={styles.signUpButton}
+      >
+        <Text style={styles.signUpButtonText}>Create New Account</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  // Profile sections for logged-in users
   const renderAccountInfo = () => (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Account Information</Text>
@@ -244,33 +257,42 @@ const ProfileScreen = ({ navigation }) => {
           <Icon name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Profile</Text>
-        <TouchableOpacity onPress={toggleEditMode} style={styles.editButton}>
-          <Icon name={editMode ? "checkmark" : "create-outline"} size={24} color="#E63946" />
-        </TouchableOpacity>
+        {isLoggedIn && (
+          <TouchableOpacity onPress={toggleEditMode} style={styles.editButton}>
+            <Icon name={editMode ? "checkmark" : "create-outline"} size={24} color="#E63946" />
+          </TouchableOpacity>
+        )}
+        {!isLoggedIn && <View style={{ width: 40 }} />}
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Profile Header */}
-        <View style={styles.profileHeader}>
-          <Image source={userData.profileImage} style={styles.profileImage} />
-          <Text style={styles.profileName}>{userData.name}</Text>
-          <Text style={styles.profileEmail}>{userData.email}</Text>
-        </View>
+        {!isLoggedIn ? (
+          renderNotLoggedIn()
+        ) : (
+          <>
+            {/* Profile Header */}
+            <View style={styles.profileHeader}>
+              <Image source={userData.profileImage} style={styles.profileImage} />
+              <Text style={styles.profileName}>{userData.name}</Text>
+              <Text style={styles.profileEmail}>{userData.email}</Text>
+            </View>
 
-        {/* Account Stats */}
-        {renderAccountStats()}
+            {/* Account Stats */}
+            {renderAccountStats()}
 
-        {/* Account Information */}
-        {renderAccountInfo()}
+            {/* Account Information */}
+            {renderAccountInfo()}
 
-        {/* Settings */}
-        {renderSettings()}
+            {/* Settings */}
+            {renderSettings()}
 
-        {/* Sign Out Button */}
-        <TouchableOpacity style={styles.signOutButton} onPress={signOut}>
-          <Icon name="log-out-outline" size={20} color="#E63946" />
-          <Text style={styles.signOutText}>Sign Out</Text>
-        </TouchableOpacity>
+            {/* Sign Out Button */}
+            <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+              <Icon name="log-out-outline" size={20} color="#E63946" />
+              <Text style={styles.signOutText}>Sign Out</Text>
+            </TouchableOpacity>
+          </>
+        )}
 
         {/* Bottom Space */}
         <View style={{ height: 30 }} />
@@ -313,6 +335,62 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0F0F0',
     borderRadius: 20,
   },
+  // Not logged in styles
+  notLoggedInContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 30,
+    marginTop: 50,
+  },
+  notLoggedInTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  notLoggedInSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 30,
+    lineHeight: 20,
+  },
+  signInButton: {
+    backgroundColor: '#E63946',
+    width: '100%',
+    height: 55,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  signInButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  signUpButton: {
+    backgroundColor: '#FFF',
+    width: '100%',
+    height: 55,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E63946',
+  },
+  signUpButtonText: {
+    color: '#E63946',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  // Logged in styles
   profileHeader: {
     alignItems: 'center',
     paddingVertical: 20,
