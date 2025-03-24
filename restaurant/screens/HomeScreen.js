@@ -94,7 +94,7 @@ const HomeScreen = ({ navigation }) => {
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>Hello, Guest!</Text>
-          <Text style={styles.subGreeting}>What would you like to eat today?</Text>
+          {/* <Text style={styles.subGreeting}>What would you like to eat today?</Text> */}
         </View>
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.iconButton}>
@@ -228,19 +228,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingVertical: 20, // Reduced from 15 to 10
   },
   headerRight: {
     flexDirection: 'row',
   },
   iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38, // Reduced from 40 to 38
+    height: 38, // Reduced from 40 to 38
+    borderRadius: 19, // Adjusted to half of width/height
     backgroundColor: '#F0F0F0',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 10,
+    marginLeft: 8, // Reduced from 10 to 8
   },
   greeting: {
     fontSize: 22,
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
   subGreeting: {
     fontSize: 14,
     color: '#666',
-    marginTop: 4,
+    marginTop: 2, // Reduced from 4 to 2
   },
   banner: {
     height: 180,
