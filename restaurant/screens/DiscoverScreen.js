@@ -303,7 +303,7 @@ const DiscoverScreen = ({ navigation }) => {
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
-              {searchQuery.trim() !== '' ? 'Search Results' : 'Popular Dishes'}
+              {searchQuery.trim() !== '' ? 'Search Results' : 'All Dishes'}
               {activeCategory ? ` • ${activeCategory}` : ''}
             </Text>
             
@@ -400,6 +400,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    right:15,
     paddingHorizontal: 20,
     marginBottom: 15,
   },

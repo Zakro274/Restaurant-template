@@ -10,7 +10,9 @@ import ScanScreen from "../screens/ScanScreen";
 import ItemDescriptionScreen from "../screens/ItemDescriptionScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import PlaceholderScreen from "../screens/PlaceholderScreen";
-import CartScreen from "../screens/CartScreen"; // Import the new CartScreen
+import CartScreen from "../screens/CartScreen";
+import SpecialOfferScreen from "../screens/SpecialOfferScreen";
+import PromotionDetailScreen from "../screens/PromotionDetailScreen";
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -26,6 +28,8 @@ const HomeStack = () => {
       <Stack.Screen name="OrderHistory" component={PlaceholderScreen} />
       <Stack.Screen name="PaymentMethods" component={PlaceholderScreen} />
       <Stack.Screen name="Addresses" component={PlaceholderScreen} />
+      <Stack.Screen name="SpecialOffer" component={SpecialOfferScreen} />
+      <Stack.Screen name="PromotionDetail" component={PromotionDetailScreen} />
     </Stack.Navigator>
   );
 };
@@ -37,6 +41,7 @@ const DiscoverStack = () => {
       <Stack.Screen name="DiscoverMain" component={DiscoverScreen} />
       <Stack.Screen name="ItemDescription" component={ItemDescriptionScreen} />
       <Stack.Screen name="Cart" component={CartScreen} />
+      <Stack.Screen name="PromotionDetail" component={PromotionDetailScreen} />
     </Stack.Navigator>
   );
 };
