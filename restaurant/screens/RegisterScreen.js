@@ -13,8 +13,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { auth } from '../config/firebase';
+import { auth, firestore } from '../config/firebase';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 const RegisterScreen = ({ navigation }) => {
   const [name, setName] = useState('');
@@ -55,6 +56,25 @@ const RegisterScreen = ({ navigation }) => {
       // Add the display name to the user profile
       await updateProfile(userCredential.user, {
         displayName: name
+      });
+      
+      // Create user document in Firestore with the UID from Auth
+      const userId = userCredential.user.uid;
+      await setDoc(doc(firestore, 'users', userId), {
+        displayName: name,
+        email: email,
+        phoneNumber: '',
+        address: '',
+        profileImageUrl: '',
+        role: 'customer',  // Default role for new users
+        createdAt: serverTimestamp(),
+        lastLogin: serverTimestamp(),
+        favoriteItems: [],
+        settings: {
+          notifications: true,
+          darkMode: false,
+          locationServices: false
+        }
       });
       
       Alert.alert(

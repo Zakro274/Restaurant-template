@@ -1,4 +1,4 @@
-import React, { useState, useEffect  } from "react";
+import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
   View,
@@ -10,11 +10,11 @@ import {
   ImageBackground,
   ActivityIndicator,
 } from "react-native";
-import { firestore } from '../config/firebase';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { firestore } from "../config/firebase";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/Ionicons";
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from "../context/AuthContext";
 
 const { width } = Dimensions.get("window");
 
@@ -53,21 +53,21 @@ const HomeScreen = ({ navigation }) => {
       try {
         setIsLoading(true);
         setError(null);
-        
+
         // Create a query to get only featured items
         const featuredQuery = query(
-          collection(firestore, 'foodItems'),
-          where('featured', '==', true)
+          collection(firestore, "foodItems"),
+          where("featured", "==", true)
         );
-        
+
         const querySnapshot = await getDocs(featuredQuery);
-        
+
         if (querySnapshot.empty) {
-          console.log('No featured items found');
+          console.log("No featured items found");
           setFeaturedItems([]);
         } else {
           // Map the Firestore documents to our app's data format
-          const items = querySnapshot.docs.map(doc => {
+          const items = querySnapshot.docs.map((doc) => {
             const data = doc.data();
             return {
               id: doc.id,
@@ -75,7 +75,9 @@ const HomeScreen = ({ navigation }) => {
               description: data.description,
               price: `$${data.price.toFixed(2)}`,
               // Handle image URLs from Firestore or use a placeholder
-              image: data.imageUrl ? { uri: data.imageUrl } : require("../assets/placeholder-pizza.jpg"),
+              image: data.imageUrl
+                ? { uri: data.imageUrl }
+                : require("../assets/placeholder-pizza.jpg"),
               rating: data.rating || 4.5,
               reviews: data.reviews || 0,
               calories: data.calories || 0,
@@ -85,13 +87,13 @@ const HomeScreen = ({ navigation }) => {
               spicyLevel: data.spicyLevel || "Mild",
             };
           });
-          
+
           setFeaturedItems(items);
         }
       } catch (error) {
         console.error("Error fetching featured items:", error);
         setError("Failed to load featured items");
-        
+
         // Set fallback featured items in case of error
         setFeaturedItems([
           // Your fallback items here
@@ -100,7 +102,7 @@ const HomeScreen = ({ navigation }) => {
         setIsLoading(false);
       }
     };
-    
+
     fetchFeaturedItems();
   }, []);
 
@@ -110,7 +112,9 @@ const HomeScreen = ({ navigation }) => {
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>
-            {isLoggedIn ? `Hello, ${userData.name.split(' ')[0]}!` : 'Hello, Guest!'}
+            {isLoggedIn && userData
+              ? `Hello, ${userData.name.split(" ")[0]}!`
+              : "Hello, Guest!"}
           </Text>
           <Text style={styles.subGreeting}>
             What would you like to eat today?
@@ -158,62 +162,66 @@ const HomeScreen = ({ navigation }) => {
         </TouchableOpacity>
 
         {/* Featured Items */}
-<View style={styles.menuContainer}>
-  <Text style={styles.sectionTitle}>Featured Items</Text>
-  
-  {isLoading ? (
-    <View style={styles.loadingContainer}>
-      <ActivityIndicator size="large" color="#E63946" />
-      <Text style={styles.loadingText}>Loading featured items...</Text>
-    </View>
-  ) : error ? (
-    <View style={styles.errorContainer}>
-      <Icon name="alert-circle-outline" size={40} color="#E63946" />
-      <Text style={styles.errorText}>{error}</Text>
-    </View>
-  ) : featuredItems.length === 0 ? (
-    <View style={styles.emptyContainer}>
-      <Icon name="restaurant-outline" size={40} color="#999" />
-      <Text style={styles.emptyText}>No featured items available</Text>
-    </View>
-  ) : (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.menuScrollView}
-    >
-      {featuredItems.map((item) => (
-        <TouchableOpacity
-          key={item.id}
-          style={styles.menuItem}
-          onPress={() => navigation.navigate("ItemDescription", { item })}
-        >
-          <Image 
-            source={item.image} 
-            style={styles.menuItemImage}
-            defaultSource={require("../assets/placeholder-pizza.jpg")}
-          />
-          <View style={styles.menuItemContent}>
-            <View style={styles.menuItemRating}>
-              <Icon name="star" size={16} color="#FFD700" />
-              <Text style={styles.menuItemRatingText}>{item.rating}</Text>
+        <View style={styles.menuContainer}>
+          <Text style={styles.sectionTitle}>Featured Items</Text>
+
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#E63946" />
+              <Text style={styles.loadingText}>Loading featured items...</Text>
             </View>
-            <Text style={styles.menuItemName}>{item.name}</Text>
-            <Text style={styles.menuItemDescription} numberOfLines={2}>
-              {item.description}
-            </Text>
-            <View style={styles.menuItemFooter}>
-              <Text style={styles.menuItemPrice}>{item.price}</Text>
-              <TouchableOpacity style={styles.addButton}>
-                <Icon name="add" size={20} color="#FFF" />
-              </TouchableOpacity>
+          ) : error ? (
+            <View style={styles.errorContainer}>
+              <Icon name="alert-circle-outline" size={40} color="#E63946" />
+              <Text style={styles.errorText}>{error}</Text>
             </View>
-          </View>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
-  )}
-</View>
+          ) : featuredItems.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Icon name="restaurant-outline" size={40} color="#999" />
+              <Text style={styles.emptyText}>No featured items available</Text>
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.menuScrollView}
+            >
+              {featuredItems.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.menuItem}
+                  onPress={() =>
+                    navigation.navigate("ItemDescription", { item })
+                  }
+                >
+                  <Image
+                    source={item.image}
+                    style={styles.menuItemImage}
+                    defaultSource={require("../assets/placeholder-pizza.jpg")}
+                  />
+                  <View style={styles.menuItemContent}>
+                    <View style={styles.menuItemRating}>
+                      <Icon name="star" size={16} color="#FFD700" />
+                      <Text style={styles.menuItemRatingText}>
+                        {item.rating}
+                      </Text>
+                    </View>
+                    <Text style={styles.menuItemName}>{item.name}</Text>
+                    <Text style={styles.menuItemDescription} numberOfLines={2}>
+                      {item.description}
+                    </Text>
+                    <View style={styles.menuItemFooter}>
+                      <Text style={styles.menuItemPrice}>{item.price}</Text>
+                      <TouchableOpacity style={styles.addButton}>
+                        <Icon name="add" size={20} color="#FFF" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
+        </View>
 
         {/* Promotions */}
         <View style={styles.promotionsContainer}>
@@ -338,7 +346,7 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
-  
+
   menuContainer: {
     marginTop: 25,
     paddingHorizontal: 20,
@@ -468,39 +476,39 @@ const styles = StyleSheet.create({
   },
   // Add these new styles
   loadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 30,
     height: 200,
   },
   loadingText: {
     marginTop: 10,
     fontSize: 14,
-    color: '#666',
+    color: "#666",
   },
   errorContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 30,
     height: 200,
   },
   errorText: {
     marginTop: 10,
     fontSize: 14,
-    color: '#E63946',
-    textAlign: 'center',
+    color: "#E63946",
+    textAlign: "center",
   },
   emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 30,
     height: 200,
   },
   emptyText: {
     marginTop: 10,
     fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
   },
 });
 

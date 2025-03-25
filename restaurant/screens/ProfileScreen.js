@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from "react";
+import { doc, updateDoc } from "firebase/firestore";
+import { firestore, auth } from "../config/firebase";
 import {
   StyleSheet,
   View,
@@ -8,11 +10,11 @@ import {
   TouchableOpacity,
   TextInput,
   Switch,
-  Alert
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import Icon from 'react-native-vector-icons/Ionicons';
-import { useAuth } from '../context/AuthContext';
+  Alert,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import Icon from "react-native-vector-icons/Ionicons";
+import { useAuth } from "../context/AuthContext";
 
 const ProfileScreen = ({ navigation }) => {
   const { isLoggedIn, userData, logout, isManager } = useAuth();
@@ -23,42 +25,144 @@ const ProfileScreen = ({ navigation }) => {
   const [locationServices, setLocationServices] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [tempUserData, setTempUserData] = useState(userData || {});
+  const [isSaving, setIsSaving] = useState(false);
 
-  const toggleEditMode = () => {
+  useEffect(() => {
+    if (userData && userData.settings) {
+      setNotifications(userData.settings.notifications || false);
+      setDarkMode(userData.settings.darkMode || false);
+      setLocationServices(userData.settings.locationServices || false);
+    }
+
+    if (userData) {
+      setTempUserData({ ...userData });
+    }
+  }, [userData]);
+
+  const saveChangesToFirestore = async () => {
+    if (!isLoggedIn || !auth.currentUser) {
+      Alert.alert("Error", "You must be logged in to update your profile");
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      const userId = auth.currentUser.uid;
+      const userRef = doc(firestore, "users", userId);
+
+      // Prepare data to update in Firestore
+      const updateData = {
+        displayName: tempUserData.name,
+        phoneNumber: tempUserData.phone || "",
+        address: tempUserData.address || "",
+        settings: {
+          notifications,
+          darkMode,
+          locationServices,
+        },
+      };
+
+      // Update Firestore document
+      await updateDoc(userRef, updateData);
+
+      Alert.alert("Success", "Profile updated successfully!");
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      Alert.alert("Error", "Failed to update profile. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const toggleEditMode = async () => {
     if (editMode) {
-      // Save changes
-      // In a real app, you would update userData in AuthContext
-      Alert.alert('Success', 'Profile updated successfully!');
+      // Save changes to Firestore
+      await saveChangesToFirestore();
     }
     setEditMode(!editMode);
+  };
+
+  const updateSettingInFirestore = async (setting, value) => {
+    if (!isLoggedIn || !auth.currentUser) {
+      Alert.alert("Error", "You must be logged in to update settings");
+      return;
+    }
+
+    try {
+      const userId = auth.currentUser.uid;
+      const userRef = doc(firestore, "users", userId);
+
+      // Create object with nested path for the specific setting
+      const updateData = {
+        [`settings.${setting}`]: value,
+      };
+
+      // Update just this one setting
+      await updateDoc(userRef, updateData);
+    } catch (error) {
+      console.error(`Error updating ${setting}:`, error);
+
+      // Revert the UI state if the server update failed
+      switch (setting) {
+        case "notifications":
+          setNotifications(!value);
+          break;
+        case "darkMode":
+          setDarkMode(!value);
+          break;
+        case "locationServices":
+          setLocationServices(!value);
+          break;
+      }
+
+      Alert.alert("Error", `Failed to update ${setting}. Please try again.`);
+    }
   };
 
   const handleInputChange = (field, value) => {
     setTempUserData({
       ...tempUserData,
-      [field]: value
+      [field]: value,
     });
   };
 
+  const handleToggleNotifications = async (value) => {
+    setNotifications(value);
+    if (!editMode) {
+      await updateSettingInFirestore("notifications", value);
+    }
+  };
+
+  const handleToggleDarkMode = async (value) => {
+    setDarkMode(value);
+    if (!editMode) {
+      await updateSettingInFirestore("darkMode", value);
+    }
+  };
+
+  const handleToggleLocationServices = async (value) => {
+    setLocationServices(value);
+    if (!editMode) {
+      await updateSettingInFirestore("locationServices", value);
+    }
+  };
+
   const handleSignOut = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel'
+    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Sign Out",
+        onPress: () => {
+          logout();
+          Alert.alert("Signed Out", "You have been signed out successfully");
         },
-        {
-          text: 'Sign Out',
-          onPress: () => {
-            logout();
-            Alert.alert('Signed Out', 'You have been signed out successfully');
-          },
-          style: 'destructive'
-        }
-      ]
-    );
+        style: "destructive",
+      },
+    ]);
   };
 
   // Render the not logged in state
@@ -67,17 +171,18 @@ const ProfileScreen = ({ navigation }) => {
       <Icon name="person-circle-outline" size={120} color="#E0E0E0" />
       <Text style={styles.notLoggedInTitle}>You're not signed in</Text>
       <Text style={styles.notLoggedInSubtitle}>
-        Sign in to view your profile, track orders, and manage your account settings.
+        Sign in to view your profile, track orders, and manage your account
+        settings.
       </Text>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.signInButton}
-        onPress={() => navigation.navigate('Login')}
+        onPress={() => navigation.navigate("Login")}
       >
         <Text style={styles.signInButtonText}>Sign In</Text>
       </TouchableOpacity>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.signUpButton}
-        onPress={() => navigation.navigate('Register')}
+        onPress={() => navigation.navigate("Register")}
       >
         <Text style={styles.signUpButtonText}>Create New Account</Text>
       </TouchableOpacity>
@@ -93,24 +198,23 @@ const ProfileScreen = ({ navigation }) => {
         {editMode ? (
           <TextInput
             style={styles.input}
-            value={tempUserData.name}
+            value={tempUserData.name || ''}
             onChangeText={(text) => handleInputChange('name', text)}
           />
         ) : (
-          <Text style={styles.infoValue}>{userData.name}</Text>
+          <Text style={styles.infoValue}>{userData?.name || 'Not set'}</Text>
         )}
       </View>
       <View style={styles.infoItem}>
         <Text style={styles.infoLabel}>Email</Text>
         {editMode ? (
           <TextInput
-            style={styles.input}
-            value={tempUserData.email}
-            onChangeText={(text) => handleInputChange('email', text)}
-            keyboardType="email-address"
+            style={[styles.input, { color: '#999' }]}
+            value={tempUserData.email || ''}
+            editable={false}  // Email can't be changed directly
           />
         ) : (
-          <Text style={styles.infoValue}>{userData.email}</Text>
+          <Text style={styles.infoValue}>{userData?.email || 'Not set'}</Text>
         )}
       </View>
       <View style={styles.infoItem}>
@@ -118,12 +222,12 @@ const ProfileScreen = ({ navigation }) => {
         {editMode ? (
           <TextInput
             style={styles.input}
-            value={tempUserData.phone}
+            value={tempUserData.phone || ''}
             onChangeText={(text) => handleInputChange('phone', text)}
             keyboardType="phone-pad"
           />
         ) : (
-          <Text style={styles.infoValue}>{userData.phone}</Text>
+          <Text style={styles.infoValue}>{userData?.phone || 'Not set'}</Text>
         )}
       </View>
       <View style={styles.infoItem}>
@@ -131,12 +235,12 @@ const ProfileScreen = ({ navigation }) => {
         {editMode ? (
           <TextInput
             style={styles.input}
-            value={tempUserData.address}
+            value={tempUserData.address || ''}
             onChangeText={(text) => handleInputChange('address', text)}
             multiline
           />
         ) : (
-          <Text style={styles.infoValue}>{userData.address}</Text>
+          <Text style={styles.infoValue}>{userData?.address || 'Not set'}</Text>
         )}
       </View>
     </View>
@@ -165,7 +269,7 @@ const ProfileScreen = ({ navigation }) => {
   const renderSettings = () => (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Settings</Text>
-      
+
       <View style={styles.settingItem}>
         <View style={styles.settingInfo}>
           <Icon name="notifications-outline" size={22} color="#333" />
@@ -174,11 +278,11 @@ const ProfileScreen = ({ navigation }) => {
         <Switch
           value={notifications}
           onValueChange={setNotifications}
-          trackColor={{ false: '#D0D0D0', true: '#FFD0D0' }}
-          thumbColor={notifications ? '#E63946' : '#F4F3F4'}
+          trackColor={{ false: "#D0D0D0", true: "#FFD0D0" }}
+          thumbColor={notifications ? "#E63946" : "#F4F3F4"}
         />
       </View>
-      
+
       <View style={styles.settingItem}>
         <View style={styles.settingInfo}>
           <Icon name="moon-outline" size={22} color="#333" />
@@ -187,11 +291,11 @@ const ProfileScreen = ({ navigation }) => {
         <Switch
           value={darkMode}
           onValueChange={setDarkMode}
-          trackColor={{ false: '#D0D0D0', true: '#FFD0D0' }}
-          thumbColor={darkMode ? '#E63946' : '#F4F3F4'}
+          trackColor={{ false: "#D0D0D0", true: "#FFD0D0" }}
+          thumbColor={darkMode ? "#E63946" : "#F4F3F4"}
         />
       </View>
-      
+
       <View style={styles.settingItem}>
         <View style={styles.settingInfo}>
           <Icon name="location-outline" size={22} color="#333" />
@@ -200,35 +304,44 @@ const ProfileScreen = ({ navigation }) => {
         <Switch
           value={locationServices}
           onValueChange={setLocationServices}
-          trackColor={{ false: '#D0D0D0', true: '#FFD0D0' }}
-          thumbColor={locationServices ? '#E63946' : '#F4F3F4'}
+          trackColor={{ false: "#D0D0D0", true: "#FFD0D0" }}
+          thumbColor={locationServices ? "#E63946" : "#F4F3F4"}
         />
       </View>
-      
-      <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('PaymentMethods')}>
+
+      <TouchableOpacity
+        style={styles.menuItem}
+        onPress={() => navigation.navigate("PaymentMethods")}
+      >
         <View style={styles.menuItemContent}>
           <Icon name="card-outline" size={22} color="#333" />
           <Text style={styles.menuItemLabel}>Payment Methods</Text>
         </View>
         <Icon name="chevron-forward" size={22} color="#999" />
       </TouchableOpacity>
-      
-      <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('OrderHistory')}>
+
+      <TouchableOpacity
+        style={styles.menuItem}
+        onPress={() => navigation.navigate("OrderHistory")}
+      >
         <View style={styles.menuItemContent}>
           <Icon name="receipt-outline" size={22} color="#333" />
           <Text style={styles.menuItemLabel}>Order History</Text>
         </View>
         <Icon name="chevron-forward" size={22} color="#999" />
       </TouchableOpacity>
-      
-      <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Addresses')}>
+
+      <TouchableOpacity
+        style={styles.menuItem}
+        onPress={() => navigation.navigate("Addresses")}
+      >
         <View style={styles.menuItemContent}>
           <Icon name="location-outline" size={22} color="#333" />
           <Text style={styles.menuItemLabel}>Saved Addresses</Text>
         </View>
         <Icon name="chevron-forward" size={22} color="#999" />
       </TouchableOpacity>
-      
+
       <TouchableOpacity style={styles.menuItem}>
         <View style={styles.menuItemContent}>
           <Icon name="help-circle-outline" size={22} color="#333" />
@@ -236,7 +349,7 @@ const ProfileScreen = ({ navigation }) => {
         </View>
         <Icon name="chevron-forward" size={22} color="#999" />
       </TouchableOpacity>
-      
+
       <TouchableOpacity style={styles.menuItem}>
         <View style={styles.menuItemContent}>
           <Icon name="information-circle-outline" size={22} color="#333" />
@@ -249,14 +362,14 @@ const ProfileScreen = ({ navigation }) => {
 
   const renderManagerOptions = () => {
     if (!isManager) return null;
-    
+
     return (
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Manager Options</Text>
-        
-        <TouchableOpacity 
-          style={styles.menuItem} 
-          onPress={() => navigation.navigate('FoodManagement')}
+
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => navigation.navigate("FoodManagement")}
         >
           <View style={styles.menuItemContent}>
             <Icon name="restaurant-outline" size={22} color="#333" />
@@ -264,7 +377,7 @@ const ProfileScreen = ({ navigation }) => {
           </View>
           <Icon name="chevron-forward" size={22} color="#999" />
         </TouchableOpacity>
-        
+
         <TouchableOpacity style={styles.menuItem}>
           <View style={styles.menuItemContent}>
             <Icon name="bar-chart-outline" size={22} color="#333" />
@@ -272,7 +385,7 @@ const ProfileScreen = ({ navigation }) => {
           </View>
           <Icon name="chevron-forward" size={22} color="#999" />
         </TouchableOpacity>
-        
+
         <TouchableOpacity style={styles.menuItem}>
           <View style={styles.menuItemContent}>
             <Icon name="people-outline" size={22} color="#333" />
@@ -280,7 +393,7 @@ const ProfileScreen = ({ navigation }) => {
           </View>
           <Icon name="chevron-forward" size={22} color="#999" />
         </TouchableOpacity>
-        
+
         <TouchableOpacity style={styles.menuItem}>
           <View style={styles.menuItemContent}>
             <Icon name="pricetag-outline" size={22} color="#333" />
@@ -296,8 +409,8 @@ const ProfileScreen = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
+        <TouchableOpacity
+          style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
           <Icon name="arrow-back" size={24} color="#333" />
@@ -305,7 +418,11 @@ const ProfileScreen = ({ navigation }) => {
         <Text style={styles.headerTitle}>My Profile</Text>
         {isLoggedIn && (
           <TouchableOpacity onPress={toggleEditMode} style={styles.editButton}>
-            <Icon name={editMode ? "checkmark" : "create-outline"} size={24} color="#E63946" />
+            <Icon
+              name={editMode ? "checkmark" : "create-outline"}
+              size={24}
+              color="#E63946"
+            />
           </TouchableOpacity>
         )}
         {!isLoggedIn && <View style={{ width: 40 }} />}
@@ -318,8 +435,8 @@ const ProfileScreen = ({ navigation }) => {
           <>
             {/* Profile Header */}
             <View style={styles.profileHeader}>
-              <Image source={userData.profileImage} style={styles.profileImage} />
-              <Text style={styles.profileName}>{userData.name}</Text>
+            <Image source={userData && userData.profileImage ? userData.profileImage : require('../assets/placeholder-profile.jpg')} style={styles.profileImage} />
+            <Text style={styles.profileName}>{userData && userData.name || 'User'}</Text>
               <Text style={styles.profileEmail}>{userData.email}</Text>
               {isManager && (
                 <View style={styles.managerBadge}>
@@ -342,7 +459,10 @@ const ProfileScreen = ({ navigation }) => {
             {renderSettings()}
 
             {/* Sign Out Button */}
-            <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+            <TouchableOpacity
+              style={styles.signOutButton}
+              onPress={handleSignOut}
+            >
               <Icon name="log-out-outline" size={20} color="#E63946" />
               <Text style={styles.signOutText}>Sign Out</Text>
             </TouchableOpacity>
@@ -359,95 +479,95 @@ const ProfileScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: "#F5F5F5",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 15,
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     borderBottomWidth: 1,
-    borderBottomColor: '#EEE',
+    borderBottomColor: "#EEE",
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
   },
   backButton: {
     width: 40,
     height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   editButton: {
     width: 40,
     height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F0F0F0',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F0F0F0",
     borderRadius: 20,
   },
   // Not logged in styles
   notLoggedInContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     padding: 30,
     marginTop: 50,
   },
   notLoggedInTitle: {
     fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     marginTop: 20,
     marginBottom: 10,
   },
   notLoggedInSubtitle: {
     fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
     marginBottom: 30,
     lineHeight: 20,
   },
   signInButton: {
-    backgroundColor: '#E63946',
-    width: '100%',
+    backgroundColor: "#E63946",
+    width: "100%",
     height: 55,
     borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 15,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 3,
   },
   signInButtonText: {
-    color: '#FFF',
+    color: "#FFF",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   signUpButton: {
-    backgroundColor: '#FFF',
-    width: '100%',
+    backgroundColor: "#FFF",
+    width: "100%",
     height: 55,
     borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#E63946',
+    borderColor: "#E63946",
   },
   signUpButtonText: {
-    color: '#E63946',
+    color: "#E63946",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   // Logged in styles
   profileHeader: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 20,
   },
   profileImage: {
@@ -456,8 +576,8 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     marginBottom: 15,
     borderWidth: 3,
-    borderColor: '#FFF',
-    shadowColor: '#000',
+    borderColor: "#FFF",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -465,37 +585,37 @@ const styles = StyleSheet.create({
   },
   profileName: {
     fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     marginBottom: 5,
   },
   profileEmail: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
     marginBottom: 10,
   },
   managerBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#4CAF50',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#4CAF50",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 15,
   },
   managerBadgeText: {
-    color: '#FFF',
+    color: "#FFF",
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginLeft: 4,
   },
   statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+    flexDirection: "row",
+    justifyContent: "space-around",
     paddingVertical: 20,
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     marginHorizontal: 20,
     borderRadius: 15,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -503,26 +623,26 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   statItem: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   statCount: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     marginTop: 5,
   },
   statLabel: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
     marginTop: 2,
   },
   section: {
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     marginHorizontal: 20,
     marginBottom: 20,
     borderRadius: 15,
     padding: 15,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -530,8 +650,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     marginBottom: 15,
   },
   infoItem: {
@@ -539,70 +659,70 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
     marginBottom: 5,
   },
   infoValue: {
     fontSize: 16,
-    color: '#333',
+    color: "#333",
   },
   input: {
     fontSize: 16,
-    color: '#333',
+    color: "#333",
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: "#E0E0E0",
     paddingVertical: 5,
   },
   settingItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: "#F0F0F0",
   },
   settingInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   settingLabel: {
     fontSize: 16,
-    color: '#333',
+    color: "#333",
     marginLeft: 10,
   },
   menuItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: "#F0F0F0",
   },
   menuItemContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   menuItemLabel: {
     fontSize: 16,
-    color: '#333',
+    color: "#333",
     marginLeft: 10,
   },
   signOutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFF',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFF",
     marginHorizontal: 20,
     paddingVertical: 15,
     borderRadius: 10,
     marginTop: 10,
     borderWidth: 1,
-    borderColor: '#E63946',
+    borderColor: "#E63946",
   },
   signOutText: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#E63946',
+    fontWeight: "500",
+    color: "#E63946",
     marginLeft: 10,
   },
 });
