@@ -12,148 +12,65 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { firestore } from '../config/firebase';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 
 const DiscoverScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [foodItems, setFoodItems] = useState([]);
   const [filteredDishes, setFilteredDishes] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const categories = [
-    { id: 1, name: 'Pizza', icon: 'pizza-outline', color: '#FF7E67' },
-    { id: 2, name: 'Burgers', icon: 'fast-food-outline', color: '#FF9F45' },
-    { id: 3, name: 'Salads', icon: 'leaf-outline', color: '#7AC74F' },
-    { id: 4, name: 'Pasta', icon: 'restaurant-outline', color: '#FFD166' },
-    { id: 5, name: 'Desserts', icon: 'ice-cream-outline', color: '#E8C1C5' },
-    { id: 6, name: 'Drinks', icon: 'wine-outline', color: '#748DA6' },
-  ];
+  // Fetch categories and food items from Firebase
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const categoriesSnapshot = await getDocs(collection(firestore, 'categories'));
+        const categoriesData = categoriesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        // Add 'All' as the first category
+        setCategories([
+          { id: 'all', name: 'All', icon: 'grid-outline', color: '#748DA6' },
+          ...categoriesData
+        ]);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+        setError('Failed to load categories');
+      }
+    };
 
-  const popularDishes = [
-    {
-      id: 1,
-      name: 'Pepperoni Pizza',
-      description: 'Classic pepperoni with mozzarella',
-      price: '$12.99',
-      image: require('../assets/placeholder-pizza.jpg'),
-      rating: 4.8,
-      reviews: 127,
-      calories: 275,
-      prepTime: '15-20 min',
-      category: 'Pizza',
-      ingredients: [
-        'Fresh dough', 'Tomato sauce', 'Mozzarella cheese', 'Pepperoni',
-        'Oregano', 'Olive oil'
-      ],
-      allergens: ['Wheat', 'Dairy'],
-      spicyLevel: 'Medium'
-    },
-    {
-      id: 2,
-      name: 'Classic Cheeseburger',
-      description: 'Beef patty with cheese and special sauce',
-      price: '$10.99',
-      image: require('../assets/placeholder-burger.jpg'),
-      rating: 4.6,
-      reviews: 96,
-      calories: 420,
-      prepTime: '10-12 min',
-      category: 'Burgers',
-      ingredients: [
-        'Beef patty', 'Sesame bun', 'Cheddar cheese', 'Lettuce',
-        'Tomato', 'Pickles', 'Special sauce'
-      ],
-      allergens: ['Wheat', 'Dairy', 'Egg'],
-      spicyLevel: 'Mild'
-    },
-    {
-      id: 3,
-      name: 'Caesar Salad',
-      description: 'Romaine lettuce with croutons and dressing',
-      price: '$8.99',
-      image: require('../assets/placeholder-salad.jpg'),
-      rating: 4.5,
-      reviews: 72,
-      calories: 180,
-      prepTime: '5-8 min',
-      category: 'Salads',
-      ingredients: [
-        'Romaine lettuce', 'Croutons', 'Parmesan cheese', 'Caesar dressing',
-        'Black pepper', 'Lemon juice'
-      ],
-      allergens: ['Wheat', 'Dairy', 'Egg'],
-      spicyLevel: 'Mild'
-    },
-    {
-      id: 4,
-      name: 'Fettuccine Alfredo',
-      description: 'Creamy pasta with parmesan cheese',
-      price: '$13.99',
-      image: require('../assets/placeholder-pasta.jpg'),
-      rating: 4.7,
-      reviews: 84,
-      calories: 410,
-      prepTime: '12-15 min',
-      category: 'Pasta',
-      ingredients: [
-        'Fettuccine pasta', 'Heavy cream', 'Butter', 'Parmesan cheese',
-        'Garlic', 'Black pepper', 'Parsley'
-      ],
-      allergens: ['Wheat', 'Dairy'],
-      spicyLevel: 'Mild'
-    },
-    {
-      id: 5,
-      name: 'Chocolate Cake',
-      description: 'Rich chocolate cake with ganache',
-      price: '$7.99',
-      image: require('../assets/placeholder-pizza.jpg'), // Replace with dessert image
-      rating: 4.9,
-      reviews: 103,
-      calories: 380,
-      prepTime: '5 min',
-      category: 'Desserts',
-      ingredients: [
-        'Chocolate', 'Flour', 'Sugar', 'Eggs', 'Butter', 'Vanilla'
-      ],
-      allergens: ['Wheat', 'Dairy', 'Egg'],
-      spicyLevel: 'None'
-    },
-    {
-      id: 6,
-      name: 'Strawberry Milkshake',
-      description: 'Creamy milkshake with fresh strawberries',
-      price: '$5.99',
-      image: require('../assets/placeholder-pasta.jpg'), // Replace with drink image
-      rating: 4.7,
-      reviews: 68,
-      calories: 320,
-      prepTime: '5 min',
-      category: 'Drinks',
-      ingredients: [
-        'Milk', 'Ice cream', 'Fresh strawberries', 'Whipped cream'
-      ],
-      allergens: ['Dairy'],
-      spicyLevel: 'None'
-    },
-    {
-      id: 7,
-      name: 'Margherita Pizza',
-      description: 'Classic Italian pizza with tomato, mozzarella, and basil',
-      price: '$11.99',
-      image: require('../assets/placeholder-pizza.jpg'),
-      rating: 4.6,
-      reviews: 112,
-      calories: 260,
-      prepTime: '15-20 min',
-      category: 'Pizza',
-      ingredients: [
-        'Fresh dough', 'Tomato sauce', 'Fresh mozzarella', 'Basil leaves',
-        'Olive oil', 'Salt'
-      ],
-      allergens: ['Wheat', 'Dairy'],
-      spicyLevel: 'Mild'
-    }
-  ];
+    const fetchFoodItems = async () => {
+      try {
+        setIsLoading(true);
+        const foodItemsSnapshot = await getDocs(collection(firestore, 'foodItems'));
+        const foodItemsData = foodItemsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          // Create a compatible format with the existing code
+          price: `$${doc.data().price}`,
+          image: { uri: doc.data().imageUrl } // Adjust this based on how you store images
+        }));
+        
+        setFoodItems(foodItemsData);
+        setFilteredDishes(foodItemsData);
+      } catch (error) {
+        console.error('Error fetching food items:', error);
+        setError('Failed to load menu items');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCategories();
+    fetchFoodItems();
+  }, []);
 
   // Filter dishes based on search query and active category
   useEffect(() => {
@@ -161,15 +78,15 @@ const DiscoverScreen = ({ navigation }) => {
     
     // Simulate a slight delay for search to feel more natural
     const searchTimer = setTimeout(() => {
-      const filtered = popularDishes.filter(dish => {
+      const filtered = foodItems.filter(dish => {
         const matchesSearch = searchQuery.trim() === '' || 
           dish.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           dish.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          dish.ingredients.some(ingredient => 
+          (dish.ingredients && Array.isArray(dish.ingredients) && dish.ingredients.some(ingredient => 
             ingredient.toLowerCase().includes(searchQuery.toLowerCase())
-          );
+          ));
         
-        const matchesCategory = !activeCategory || 
+        const matchesCategory = !activeCategory || activeCategory === 'All' || 
           dish.category === activeCategory;
         
         return matchesSearch && matchesCategory;
@@ -180,7 +97,7 @@ const DiscoverScreen = ({ navigation }) => {
     }, 500);
     
     return () => clearTimeout(searchTimer);
-  }, [searchQuery, activeCategory]);
+  }, [searchQuery, activeCategory, foodItems]);
 
   const handleCategoryPress = (categoryName) => {
     if (activeCategory === categoryName) {
@@ -199,8 +116,8 @@ const DiscoverScreen = ({ navigation }) => {
       ]}
       onPress={() => handleCategoryPress(item.name)}
     >
-      <View style={[styles.categoryIcon, { backgroundColor: item.color }]}>
-        <Icon name={item.icon} size={24} color="#FFF" />
+      <View style={[styles.categoryIcon, { backgroundColor: item.color || '#E63946' }]}>
+        <Icon name={item.icon || 'restaurant-outline'} size={24} color="#FFF" />
       </View>
       <Text style={[
         styles.categoryName,
@@ -211,31 +128,51 @@ const DiscoverScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
-  const renderDishItem = ({ item }) => (
-    <TouchableOpacity 
-      style={styles.dishItem}
-      onPress={() => navigation.navigate('ItemDescription', { item })}
-    >
-      <Image source={item.image} style={styles.dishImage} />
-      <View style={styles.dishContent}>
-        <Text style={styles.dishName}>{item.name}</Text>
-        <Text style={styles.dishDescription} numberOfLines={1}>
-          {item.description}
-        </Text>
-        <View style={styles.dishRatingContainer}>
-          <Icon name="star" size={16} color="#FFD700" />
-          <Text style={styles.dishRating}>{item.rating}</Text>
-          <Text style={styles.dishReviews}>({item.reviews} reviews)</Text>
+  const renderDishItem = ({ item }) => {
+    // Handle different possible image sources
+    let imageSource;
+    if (item.imageUrl) {
+      // If we have a Firebase Storage URL
+      imageSource = { uri: item.imageUrl };
+    } else if (typeof item.image === 'object' && item.image.uri) {
+      // If we have an object with uri property
+      imageSource = item.image;
+    } else {
+      // Fallback to placeholder
+      imageSource = require('../assets/placeholder-pizza.jpg');
+    }
+    
+    return (
+      <TouchableOpacity 
+        style={styles.dishItem}
+        onPress={() => navigation.navigate('ItemDescription', { item })}
+      >
+        <Image 
+          source={imageSource}
+          style={styles.dishImage}
+          // Add error handling for image loading failures
+          onError={() => console.log(`Failed to load image for ${item.name}`)}
+        />
+        <View style={styles.dishContent}>
+          <Text style={styles.dishName}>{item.name}</Text>
+          <Text style={styles.dishDescription} numberOfLines={1}>
+            {item.description}
+          </Text>
+          <View style={styles.dishRatingContainer}>
+            <Icon name="star" size={16} color="#FFD700" />
+            <Text style={styles.dishRating}>{item.rating || '4.5'}</Text>
+            <Text style={styles.dishReviews}>({item.reviews || '0'} reviews)</Text>
+          </View>
+          <View style={styles.dishFooter}>
+            <Text style={styles.dishPrice}>{typeof item.price === 'number' ? `${item.price.toFixed(2)}` : item.price}</Text>
+            <TouchableOpacity style={styles.addButton}>
+              <Icon name="add" size={18} color="#FFF" />
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={styles.dishFooter}>
-          <Text style={styles.dishPrice}>{item.price}</Text>
-          <TouchableOpacity style={styles.addButton}>
-            <Icon name="add" size={18} color="#FFF" />
-          </TouchableOpacity>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   const renderEmptyResult = () => (
     <View style={styles.emptyResultContainer}>
@@ -245,6 +182,31 @@ const DiscoverScreen = ({ navigation }) => {
         We couldn't find any dishes matching your search.
         Try a different keyword or category.
       </Text>
+    </View>
+  );
+
+  const renderError = () => (
+    <View style={styles.emptyResultContainer}>
+      <Icon name="alert-circle-outline" size={60} color="#E63946" />
+      <Text style={styles.emptyResultTitle}>Something went wrong</Text>
+      <Text style={styles.emptyResultText}>
+        {error || 'Failed to load menu items. Please try again later.'}
+      </Text>
+      <TouchableOpacity 
+        style={styles.retryButton}
+        onPress={() => {
+          setIsLoading(true);
+          // Reload the component (re-trigger the useEffect)
+          setFoodItems([]);
+          setFilteredDishes([]);
+          // Force a re-render
+          setTimeout(() => {
+            setIsLoading(false);
+          }, 100);
+        }}
+      >
+        <Text style={styles.retryButtonText}>Retry</Text>
+      </TouchableOpacity>
     </View>
   );
 
@@ -285,54 +247,63 @@ const DiscoverScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Categories */}
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Categories</Text>
-          <FlatList
-            data={categories}
-            renderItem={renderCategoryItem}
-            keyExtractor={(item) => item.id.toString()}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoriesList}
-          />
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#E63946" />
+          <Text style={styles.loadingText}>Loading menu items...</Text>
         </View>
+      ) : error ? (
+        renderError()
+      ) : (
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {/* Categories */}
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>Categories</Text>
+            <FlatList
+              data={categories}
+              renderItem={renderCategoryItem}
+              keyExtractor={(item) => item.id.toString()}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoriesList}
+            />
+          </View>
 
-        {/* Results Section */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              {searchQuery.trim() !== '' ? 'Search Results' : 'All Dishes'}
-              {activeCategory ? ` • ${activeCategory}` : ''}
-            </Text>
+          {/* Results Section */}
+          <View style={styles.sectionContainer}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>
+                {searchQuery.trim() !== '' ? 'Search Results' : 'All Dishes'}
+                {activeCategory && activeCategory !== 'All' ? ` • ${activeCategory}` : ''}
+              </Text>
+              
+              {!searchQuery && !activeCategory && (
+                <TouchableOpacity>
+                  <Text style={styles.seeAllText}>See All</Text>
+                </TouchableOpacity>
+              )}
+            </View>
             
-            {!searchQuery && !activeCategory && (
-              <TouchableOpacity>
-                <Text style={styles.seeAllText}>See All</Text>
-              </TouchableOpacity>
+            {isSearching ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#E63946" />
+                <Text style={styles.loadingText}>Searching...</Text>
+              </View>
+            ) : filteredDishes.length > 0 ? (
+              <FlatList
+                data={filteredDishes}
+                renderItem={renderDishItem}
+                keyExtractor={(item) => item.id.toString()}
+                showsVerticalScrollIndicator={false}
+                scrollEnabled={false}
+                contentContainerStyle={styles.dishesList}
+              />
+            ) : (
+              renderEmptyResult()
             )}
           </View>
-          
-          {isSearching ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#E63946" />
-              <Text style={styles.loadingText}>Searching...</Text>
-            </View>
-          ) : filteredDishes.length > 0 ? (
-            <FlatList
-              data={filteredDishes}
-              renderItem={renderDishItem}
-              keyExtractor={(item) => item.id.toString()}
-              showsVerticalScrollIndicator={false}
-              scrollEnabled={false}
-              contentContainerStyle={styles.dishesList}
-            />
-          ) : (
-            renderEmptyResult()
-          )}
-        </View>
-      </ScrollView>
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 };
