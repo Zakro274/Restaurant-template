@@ -198,7 +198,7 @@ const ProfileScreen = ({ navigation }) => {
         {editMode ? (
           <TextInput
             style={styles.input}
-            value={tempUserData.name || ''}
+            value={tempUserData?.name || ''}
             onChangeText={(text) => handleInputChange('name', text)}
           />
         ) : (
@@ -210,7 +210,7 @@ const ProfileScreen = ({ navigation }) => {
         {editMode ? (
           <TextInput
             style={[styles.input, { color: '#999' }]}
-            value={tempUserData.email || ''}
+            value={tempUserData?.email || ''}
             editable={false}  // Email can't be changed directly
           />
         ) : (
@@ -222,7 +222,7 @@ const ProfileScreen = ({ navigation }) => {
         {editMode ? (
           <TextInput
             style={styles.input}
-            value={tempUserData.phone || ''}
+            value={tempUserData?.phone || ''}
             onChangeText={(text) => handleInputChange('phone', text)}
             keyboardType="phone-pad"
           />
@@ -235,7 +235,7 @@ const ProfileScreen = ({ navigation }) => {
         {editMode ? (
           <TextInput
             style={styles.input}
-            value={tempUserData.address || ''}
+            value={tempUserData?.address || ''}
             onChangeText={(text) => handleInputChange('address', text)}
             multiline
           />
@@ -246,25 +246,32 @@ const ProfileScreen = ({ navigation }) => {
     </View>
   );
 
-  const renderAccountStats = () => (
-    <View style={styles.statsContainer}>
-      <View style={styles.statItem}>
-        <Icon name="heart" size={24} color="#E63946" />
-        <Text style={styles.statCount}>{userData.favoriteItems}</Text>
-        <Text style={styles.statLabel}>Favorites</Text>
+  const renderAccountStats = () => {
+    // Ensure userData exists before trying to access its properties
+    const favoriteItems = userData?.favoriteItems || 0;
+    const pastOrders = userData?.pastOrders || 0;
+    const paymentMethods = userData?.paymentMethods || 0;
+    
+    return (
+      <View style={styles.statsContainer}>
+        <View style={styles.statItem}>
+          <Icon name="heart" size={24} color="#E63946" />
+          <Text style={styles.statCount}>{favoriteItems}</Text>
+          <Text style={styles.statLabel}>Favorites</Text>
+        </View>
+        <View style={styles.statItem}>
+          <Icon name="time" size={24} color="#E63946" />
+          <Text style={styles.statCount}>{pastOrders}</Text>
+          <Text style={styles.statLabel}>Orders</Text>
+        </View>
+        <View style={styles.statItem}>
+          <Icon name="wallet" size={24} color="#E63946" />
+          <Text style={styles.statCount}>{paymentMethods}</Text>
+          <Text style={styles.statLabel}>Payments</Text>
+        </View>
       </View>
-      <View style={styles.statItem}>
-        <Icon name="time" size={24} color="#E63946" />
-        <Text style={styles.statCount}>{userData.pastOrders}</Text>
-        <Text style={styles.statLabel}>Orders</Text>
-      </View>
-      <View style={styles.statItem}>
-        <Icon name="wallet" size={24} color="#E63946" />
-        <Text style={styles.statCount}>{userData.paymentMethods}</Text>
-        <Text style={styles.statLabel}>Payments</Text>
-      </View>
-    </View>
-  );
+    );
+  };
 
   const renderSettings = () => (
     <View style={styles.section}>
@@ -277,7 +284,7 @@ const ProfileScreen = ({ navigation }) => {
         </View>
         <Switch
           value={notifications}
-          onValueChange={setNotifications}
+          onValueChange={handleToggleNotifications}
           trackColor={{ false: "#D0D0D0", true: "#FFD0D0" }}
           thumbColor={notifications ? "#E63946" : "#F4F3F4"}
         />
@@ -290,7 +297,7 @@ const ProfileScreen = ({ navigation }) => {
         </View>
         <Switch
           value={darkMode}
-          onValueChange={setDarkMode}
+          onValueChange={handleToggleDarkMode}
           trackColor={{ false: "#D0D0D0", true: "#FFD0D0" }}
           thumbColor={darkMode ? "#E63946" : "#F4F3F4"}
         />
@@ -303,7 +310,7 @@ const ProfileScreen = ({ navigation }) => {
         </View>
         <Switch
           value={locationServices}
-          onValueChange={setLocationServices}
+          onValueChange={handleToggleLocationServices}
           trackColor={{ false: "#D0D0D0", true: "#FFD0D0" }}
           thumbColor={locationServices ? "#E63946" : "#F4F3F4"}
         />
@@ -435,9 +442,12 @@ const ProfileScreen = ({ navigation }) => {
           <>
             {/* Profile Header */}
             <View style={styles.profileHeader}>
-            <Image source={userData && userData.profileImage ? userData.profileImage : require('../assets/placeholder-profile.jpg')} style={styles.profileImage} />
-            <Text style={styles.profileName}>{userData && userData.name || 'User'}</Text>
-              <Text style={styles.profileEmail}>{userData.email}</Text>
+              <Image 
+                source={userData && userData.profileImage ? userData.profileImage : require('../assets/placeholder-profile.jpg')} 
+                style={styles.profileImage} 
+              />
+              <Text style={styles.profileName}>{userData?.name || 'User'}</Text>
+              <Text style={styles.profileEmail}>{userData?.email || ''}</Text>
               {isManager && (
                 <View style={styles.managerBadge}>
                   <Icon name="shield-checkmark" size={14} color="#FFF" />
