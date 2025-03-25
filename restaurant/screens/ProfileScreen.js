@@ -15,7 +15,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
 
 const ProfileScreen = ({ navigation }) => {
-  const { isLoggedIn, userData, logout } = useAuth();
+  const { isLoggedIn, userData, logout, isManager } = useAuth();
 
   // State for logged-in user settings
   const [notifications, setNotifications] = useState(false);
@@ -246,6 +246,51 @@ const ProfileScreen = ({ navigation }) => {
     </View>
   );
 
+  const renderManagerOptions = () => {
+    if (!isManager) return null;
+    
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Manager Options</Text>
+        
+        <TouchableOpacity 
+          style={styles.menuItem} 
+          onPress={() => navigation.navigate('FoodManagement')}
+        >
+          <View style={styles.menuItemContent}>
+            <Icon name="restaurant-outline" size={22} color="#333" />
+            <Text style={styles.menuItemLabel}>Food Management</Text>
+          </View>
+          <Icon name="chevron-forward" size={22} color="#999" />
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.menuItem}>
+          <View style={styles.menuItemContent}>
+            <Icon name="bar-chart-outline" size={22} color="#333" />
+            <Text style={styles.menuItemLabel}>Sales Reports</Text>
+          </View>
+          <Icon name="chevron-forward" size={22} color="#999" />
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.menuItem}>
+          <View style={styles.menuItemContent}>
+            <Icon name="people-outline" size={22} color="#333" />
+            <Text style={styles.menuItemLabel}>Staff Management</Text>
+          </View>
+          <Icon name="chevron-forward" size={22} color="#999" />
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.menuItem}>
+          <View style={styles.menuItemContent}>
+            <Icon name="pricetag-outline" size={22} color="#333" />
+            <Text style={styles.menuItemLabel}>Promotions</Text>
+          </View>
+          <Icon name="chevron-forward" size={22} color="#999" />
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -275,10 +320,19 @@ const ProfileScreen = ({ navigation }) => {
               <Image source={userData.profileImage} style={styles.profileImage} />
               <Text style={styles.profileName}>{userData.name}</Text>
               <Text style={styles.profileEmail}>{userData.email}</Text>
+              {isManager && (
+                <View style={styles.managerBadge}>
+                  <Icon name="shield-checkmark" size={14} color="#FFF" />
+                  <Text style={styles.managerBadgeText}>Manager</Text>
+                </View>
+              )}
             </View>
 
             {/* Account Stats */}
             {renderAccountStats()}
+
+            {/* Manager Options (if manager) */}
+            {renderManagerOptions()}
 
             {/* Account Information */}
             {renderAccountInfo()}
@@ -417,6 +471,21 @@ const styles = StyleSheet.create({
   profileEmail: {
     fontSize: 14,
     color: '#666',
+    marginBottom: 10,
+  },
+  managerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 15,
+  },
+  managerBadgeText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginLeft: 4,
   },
   statsContainer: {
     flexDirection: 'row',

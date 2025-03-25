@@ -5,6 +5,7 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userData, setUserData] = useState(null);
+  const [isManager, setIsManager] = useState(false);
 
   // Mock user data for demonstration
   const mockUserData = {
@@ -15,21 +16,46 @@ export const AuthProvider = ({ children }) => {
     profileImage: require('../assets/placeholder-profile.jpg'), // You'll need to add this asset
     favoriteItems: 3,
     pastOrders: 12,
-    paymentMethods: 2
+    paymentMethods: 2,
+    isManager: false
   };
 
-  const login = () => {
-    setIsLoggedIn(true);
-    setUserData(mockUserData);
+  // Mock manager data
+  const mockManagerData = {
+    name: 'Manager Smith',
+    email: 'manager@restaurant.com',
+    phone: '+1 (555) 987-6543',
+    address: '456 Admin St, Anytown, USA',
+    profileImage: require('../assets/placeholder-profile.jpg'),
+    favoriteItems: 5,
+    pastOrders: 20,
+    paymentMethods: 3,
+    isManager: true
+  };
+
+  const login = (email, password) => {
+    // In a real app, you would validate credentials here
+    // For demo purposes, we'll use hard-coded values
+    if (email === 'manager@restaurant.com' && password === 'manager123') {
+      setIsLoggedIn(true);
+      setUserData(mockManagerData);
+      setIsManager(true);
+    } else {
+      // Default to regular user login
+      setIsLoggedIn(true);
+      setUserData(mockUserData);
+      setIsManager(false);
+    }
   };
 
   const logout = () => {
     setIsLoggedIn(false);
     setUserData(null);
+    setIsManager(false);
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, userData, login, logout }}>
+    <AuthContext.Provider value={{ isLoggedIn, userData, isManager, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

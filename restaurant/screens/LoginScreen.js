@@ -5,10 +5,10 @@ import {
   Text,
   TouchableOpacity,
   TextInput,
-  Image,
   ScrollView,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -21,9 +21,13 @@ const LoginScreen = ({ navigation }) => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
   const handleLogin = () => {
-    // In a real app, you would validate credentials here
-    // For demo purposes, we'll just log in without validation
-    login();
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter both email and password');
+      return;
+    }
+    
+    // Pass email and password to login function
+    login(email, password);
     navigation.goBack();
   };
 
@@ -87,6 +91,14 @@ const LoginScreen = ({ navigation }) => {
                   color="#999" 
                 />
               </TouchableOpacity>
+            </View>
+
+            <View style={styles.loginInfoContainer}>
+              <Text style={styles.loginInfoText}>
+                Manager Credentials: 
+                {"\n"}Email: manager@restaurant.com 
+                {"\n"}Password: manager123
+              </Text>
             </View>
 
             <TouchableOpacity style={styles.forgotPasswordButton}>
@@ -284,6 +296,19 @@ const styles = StyleSheet.create({
     color: '#E63946',
     fontSize: 14,
     fontWeight: '500',
+  },
+  loginInfoContainer: {
+    backgroundColor: '#F9F9F9',
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 15,
+    borderLeftWidth: 3,
+    borderLeftColor: '#E63946',
+  },
+  loginInfoText: {
+    fontSize: 12,
+    color: '#666',
+    lineHeight: 18,
   },
 });
 

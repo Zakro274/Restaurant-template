@@ -8,12 +8,13 @@ import HomeScreen from "../screens/HomeScreen";
 import DiscoverScreen from "../screens/DiscoverScreen";
 import ScanScreen from "../screens/ScanScreen";
 import ItemDescriptionScreen from "../screens/ItemDescriptionScreen";
-import ProfileScreen from "../screens/ProfileScreen"; // This will be replaced with our modified one
+import ProfileScreen from "../screens/ProfileScreen";
 import PlaceholderScreen from "../screens/PlaceholderScreen";
 import CartScreen from "../screens/CartScreen";
 import SpecialOfferScreen from "../screens/SpecialOfferScreen";
 import PromotionDetailScreen from "../screens/PromotionDetailScreen";
-import LoginScreen from "../screens/LoginScreen"; // Import the new LoginScreen
+import LoginScreen from "../screens/LoginScreen";
+import FoodManagementScreen from "../screens/FoodManagementScreen"; // Import the new screen
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -32,6 +33,7 @@ const HomeStack = () => {
       <Stack.Screen name="Addresses" component={PlaceholderScreen} />
       <Stack.Screen name="SpecialOffer" component={SpecialOfferScreen} />
       <Stack.Screen name="PromotionDetail" component={PromotionDetailScreen} />
+      <Stack.Screen name="FoodManagement" component={FoodManagementScreen} />
     </Stack.Navigator>
   );
 };
