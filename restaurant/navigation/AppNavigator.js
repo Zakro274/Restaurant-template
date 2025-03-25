@@ -15,6 +15,7 @@ import SpecialOfferScreen from "../screens/SpecialOfferScreen";
 import PromotionDetailScreen from "../screens/PromotionDetailScreen";
 import LoginScreen from "../screens/LoginScreen";
 import FoodManagementScreen from "../screens/FoodManagementScreen"; // Import the new screen
+import RegisterScreen from "../screens/RegisterScreen"
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -27,6 +28,7 @@ const HomeStack = () => {
       <Stack.Screen name="ItemDescription" component={ItemDescriptionScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="Cart" component={CartScreen} />
       <Stack.Screen name="OrderHistory" component={PlaceholderScreen} />
       <Stack.Screen name="PaymentMethods" component={PlaceholderScreen} />

@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -7,11 +7,14 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  Alert
+  Alert,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { AuthContext } from '../context/AuthContext';
+import { auth } from '../config/firebase';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 
 const RegisterScreen = ({ navigation }) => {
   const [name, setName] = useState('');
@@ -20,34 +23,63 @@ const RegisterScreen = ({ navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   
-  const { register } = useContext(AuthContext);
-  
-  // Handle registration
+  // Handle registration with Firebase
   const handleRegister = async () => {
+    // Reset error message
+    setErrorMessage('');
+    
     // Basic validation
     if (!name || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill all fields');
+      setErrorMessage('Please fill all fields');
       return;
     }
     
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      setErrorMessage('Passwords do not match');
       return;
     }
     
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters long');
+      setErrorMessage('Password must be at least 6 characters long');
       return;
     }
     
     setIsLoading(true);
     
     try {
-      await register(name, email, password);
-      navigation.goBack();
+      // Create the user with Firebase authentication
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Add the display name to the user profile
+      await updateProfile(userCredential.user, {
+        displayName: name
+      });
+      
+      Alert.alert(
+        'Registration Successful', 
+        'Your account has been created successfully!',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
     } catch (error) {
-      Alert.alert('Registration Failed', error.message || 'An error occurred during registration');
+      let errorMsg = 'Registration failed. Please try again.';
+      
+      switch (error.code) {
+        case 'auth/email-already-in-use':
+          errorMsg = 'This email address is already in use.';
+          break;
+        case 'auth/invalid-email':
+          errorMsg = 'Please enter a valid email address.';
+          break;
+        case 'auth/weak-password':
+          errorMsg = 'Password is too weak. Please use a stronger password.';
+          break;
+        default:
+          console.error('Registration error:', error);
+      }
+      
+      setErrorMessage(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -67,101 +99,119 @@ const RegisterScreen = ({ navigation }) => {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView 
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContentContainer}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.keyboardAvoidingView}
       >
-        <View style={styles.formContainer}>
-          <Text style={styles.welcomeText}>Join Us Today!</Text>
-          <Text style={styles.subtitle}>Create an account to enjoy personalized experience</Text>
-          
-          {/* Registration Form */}
-          <View style={styles.inputContainer}>
-            <Icon name="person-outline" size={20} color="#999" style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Full Name"
-              value={name}
-              onChangeText={setName}
-              autoCapitalize="words"
-            />
-          </View>
-          
-          <View style={styles.inputContainer}>
-            <Icon name="mail-outline" size={20} color="#999" style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-          </View>
-          
-          <View style={styles.inputContainer}>
-            <Icon name="lock-closed-outline" size={20} color="#999" style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-            />
-            <TouchableOpacity
-              onPress={() => setShowPassword(!showPassword)}
-              style={styles.passwordToggle}
-            >
-              <Icon 
-                name={showPassword ? "eye-off-outline" : "eye-outline"} 
-                size={20} 
-                color="#999" 
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContentContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.formContainer}>
+            <Text style={styles.welcomeText}>Join Us Today!</Text>
+            <Text style={styles.subtitle}>Create an account to enjoy personalized experience</Text>
+            
+            {/* Error message display */}
+            {errorMessage ? (
+              <View style={styles.errorContainer}>
+                <Icon name="alert-circle-outline" size={20} color="#E63946" />
+                <Text style={styles.errorText}>{errorMessage}</Text>
+              </View>
+            ) : null}
+            
+            {/* Registration Form */}
+            <View style={styles.inputContainer}>
+              <Icon name="person-outline" size={20} color="#999" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Full Name"
+                value={name}
+                onChangeText={setName}
+                autoCapitalize="words"
+                editable={!isLoading}
               />
+            </View>
+            
+            <View style={styles.inputContainer}>
+              <Icon name="mail-outline" size={20} color="#999" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Email"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                editable={!isLoading}
+              />
+            </View>
+            
+            <View style={styles.inputContainer}>
+              <Icon name="lock-closed-outline" size={20} color="#999" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                editable={!isLoading}
+              />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.passwordToggle}
+                disabled={isLoading}
+              >
+                <Icon 
+                  name={showPassword ? "eye-off-outline" : "eye-outline"} 
+                  size={20} 
+                  color="#999" 
+                />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.inputContainer}>
+              <Icon name="shield-checkmark-outline" size={20} color="#999" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Confirm Password"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry={!showPassword}
+                editable={!isLoading}
+              />
+            </View>
+            
+            <View style={styles.policyContainer}>
+              <TouchableOpacity style={styles.checkbox}>
+                <Icon name="checkbox-outline" size={22} color="#E63946" />
+              </TouchableOpacity>
+              <Text style={styles.policyText}>
+                I agree to the <Text style={styles.policyLink}>Terms of Service</Text> and <Text style={styles.policyLink}>Privacy Policy</Text>
+              </Text>
+            </View>
+            
+            <TouchableOpacity 
+              style={[styles.registerButton, isLoading && styles.disabledButton]}
+              onPress={handleRegister}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#FFF" size="small" />
+              ) : (
+                <Text style={styles.registerButtonText}>Create Account</Text>
+              )}
             </TouchableOpacity>
+            
+            {/* Login Link */}
+            <View style={styles.loginContainer}>
+              <Text style={styles.loginText}>Already have an account? </Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                <Text style={styles.loginLink}>Sign In</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-          
-          <View style={styles.inputContainer}>
-            <Icon name="shield-checkmark-outline" size={20} color="#999" style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Confirm Password"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry={!showPassword}
-            />
-          </View>
-          
-          <View style={styles.policyContainer}>
-            <TouchableOpacity style={styles.checkbox}>
-              <Icon name="checkbox-outline" size={22} color="#E63946" />
-            </TouchableOpacity>
-            <Text style={styles.policyText}>
-              I agree to the <Text style={styles.policyLink}>Terms of Service</Text> and <Text style={styles.policyLink}>Privacy Policy</Text>
-            </Text>
-          </View>
-          
-          <TouchableOpacity 
-            style={styles.registerButton}
-            onPress={handleRegister}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#FFF" size="small" />
-            ) : (
-              <Text style={styles.registerButtonText}>Create Account</Text>
-            )}
-          </TouchableOpacity>
-          
-          {/* Login Link */}
-          <View style={styles.loginContainer}>
-            <Text style={styles.loginText}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.loginLink}>Sign In</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -191,6 +241,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   scrollView: {
     flex: 1,
   },
@@ -211,6 +264,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     marginBottom: 25,
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFE5E5',
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 15,
+    borderLeftWidth: 3,
+    borderLeftColor: '#E63946',
+  },
+  errorText: {
+    color: '#E63946',
+    fontSize: 14,
+    marginLeft: 10,
+    flex: 1,
   },
   inputContainer: {
     flexDirection: 'row',
@@ -256,6 +325,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
+  },
+  disabledButton: {
+    backgroundColor: '#F5A5A5',
   },
   registerButtonText: {
     color: '#FFF',

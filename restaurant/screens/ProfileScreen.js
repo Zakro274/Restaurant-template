@@ -77,6 +77,7 @@ const ProfileScreen = ({ navigation }) => {
       </TouchableOpacity>
       <TouchableOpacity 
         style={styles.signUpButton}
+        onPress={() => navigation.navigate('Register')}
       >
         <Text style={styles.signUpButtonText}>Create New Account</Text>
       </TouchableOpacity>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   StyleSheet,
   View,
@@ -9,61 +9,45 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
-  ActivityIndicator
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import Icon from 'react-native-vector-icons/Ionicons';
-import { auth } from '../config/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { useAuth } from '../context/AuthContext';
+  ActivityIndicator,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import Icon from "react-native-vector-icons/Ionicons";
+import { useAuth } from "../context/AuthContext";
 
 const LoginScreen = ({ navigation }) => {
-  const { login } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { login, loading } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please enter both email and password');
+      setErrorMessage("Please enter both email and password");
       return;
     }
-    
-    setIsLoading(true);
-    
+
+    setIsLoggingIn(true);
+    setErrorMessage("");
+
     try {
-      // Firebase authentication
-      await signInWithEmailAndPassword(auth, email, password);
-      
-      // If login is successful, go back to previous screen
-      navigation.goBack();
-    } catch (error) {
-      let errorMessage = 'Authentication failed';
-      
-      // Handle specific Firebase auth error codes
-      switch(error.code) {
-        case 'auth/invalid-email':
-          errorMessage = 'The email address is not valid.';
-          break;
-        case 'auth/user-disabled':
-          errorMessage = 'This user account has been disabled.';
-          break;
-        case 'auth/user-not-found':
-        case 'auth/wrong-password':
-          errorMessage = 'Invalid email or password.';
-          break;
-        case 'auth/too-many-requests':
-          errorMessage = 'Too many unsuccessful login attempts. Please try again later.';
-          break;
-        default:
-          errorMessage = 'An error occurred during login. Please try again.';
+      // Call the login function from AuthContext
+      const result = await login(email, password);
+
+      if (result.success) {
+        navigation.goBack();
+      } else {
+        setErrorMessage(
+          result.error || "Login failed. Please check your credentials."
+        );
       }
-      
-      Alert.alert('Login Failed', errorMessage);
-      console.error('Login error:', error);
+    } catch (error) {
+      setErrorMessage("An unexpected error occurred. Please try again.");
+      console.error("Login error:", error);
     } finally {
-      setIsLoading(false);
+      setIsLoggingIn(false);
     }
   };
 
@@ -71,8 +55,8 @@ const LoginScreen = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
+        <TouchableOpacity
+          style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
           <Icon name="arrow-back" size={24} color="#333" />
@@ -81,7 +65,7 @@ const LoginScreen = ({ navigation }) => {
         <View style={{ width: 40 }} />
       </View>
 
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardAvoidingView}
       >
@@ -90,66 +74,86 @@ const LoginScreen = ({ navigation }) => {
           <View style={styles.brandContainer}>
             <Icon name="restaurant" size={60} color="#E63946" />
             <Text style={styles.brandName}>Restaurant name</Text>
-            <Text style={styles.brandTagline}>Delicious food at your doorstep</Text>
+            <Text style={styles.brandTagline}>
+              Delicious food at your doorstep
+            </Text>
           </View>
 
           {/* Login Form */}
           <View style={styles.formContainer}>
+            {errorMessage ? (
+              <View style={styles.errorContainer}>
+                <Icon name="alert-circle-outline" size={20} color="#E63946" />
+                <Text style={styles.errorText}>{errorMessage}</Text>
+              </View>
+            ) : null}
+
             <View style={styles.inputContainer}>
-              <Icon name="mail-outline" size={20} color="#999" style={styles.inputIcon} />
+              <Icon
+                name="mail-outline"
+                size={20}
+                color="#999"
+                style={styles.inputIcon}
+              />
               <TextInput
                 style={styles.input}
                 placeholder="Email"
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  setErrorMessage("");
+                }}
                 keyboardType="email-address"
                 autoCapitalize="none"
-                editable={!isLoading}
+                editable={!isLoggingIn && !loading}
               />
             </View>
 
             <View style={styles.inputContainer}>
-              <Icon name="lock-closed-outline" size={20} color="#999" style={styles.inputIcon} />
+              <Icon
+                name="lock-closed-outline"
+                size={20}
+                color="#999"
+                style={styles.inputIcon}
+              />
               <TextInput
                 style={styles.input}
                 placeholder="Password"
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  setErrorMessage("");
+                }}
                 secureTextEntry={!isPasswordVisible}
                 autoCapitalize="none"
-                editable={!isLoading}
+                editable={!isLoggingIn && !loading}
               />
-              <TouchableOpacity 
-                style={styles.visibilityToggle}
+              <TouchableOpacity
                 onPress={() => setIsPasswordVisible(!isPasswordVisible)}
-                disabled={isLoading}
+                style={styles.visibilityToggle}
+                disabled={isLoggingIn || loading}
               >
-                <Icon 
-                  name={isPasswordVisible ? "eye-off-outline" : "eye-outline"} 
-                  size={20} 
-                  color="#999" 
+                <Icon
+                  name={isPasswordVisible ? "eye-off-outline" : "eye-outline"}
+                  size={20}
+                  color="#999"
                 />
               </TouchableOpacity>
-            </View>
-
-            <View style={styles.loginInfoContainer}>
-              <Text style={styles.loginInfoText}>
-                For demo purposes:
-                {"\n"}Email: manager@restaurant.com 
-                {"\n"}Password: password
-              </Text>
             </View>
 
             <TouchableOpacity style={styles.forgotPasswordButton}>
               <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={[styles.loginButton, isLoading && styles.disabledButton]}
+            <TouchableOpacity
+              style={[
+                styles.loginButton,
+                (isLoggingIn || loading) && styles.loginButtonDisabled,
+              ]}
               onPress={handleLogin}
-              disabled={isLoading}
+              disabled={isLoggingIn || loading}
             >
-              {isLoading ? (
+              {isLoggingIn || loading ? (
                 <ActivityIndicator color="#FFF" size="small" />
               ) : (
                 <Text style={styles.loginButtonText}>Sign In</Text>
@@ -164,12 +168,16 @@ const LoginScreen = ({ navigation }) => {
             </View>
 
             <View style={styles.socialButtonsContainer}>
-              <TouchableOpacity style={[styles.socialButton, styles.googleButton]}>
+              <TouchableOpacity
+                style={[styles.socialButton, styles.googleButton]}
+              >
                 <Icon name="logo-google" size={20} color="#333" />
                 <Text style={styles.socialButtonText}>Google</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity style={[styles.socialButton, styles.facebookButton]}>
+
+              <TouchableOpacity
+                style={[styles.socialButton, styles.facebookButton]}
+              >
                 <Icon name="logo-facebook" size={20} color="#3b5998" />
                 <Text style={styles.socialButtonText}>Facebook</Text>
               </TouchableOpacity>
@@ -179,7 +187,7 @@ const LoginScreen = ({ navigation }) => {
           {/* Sign Up Link */}
           <View style={styles.signupContainer}>
             <Text style={styles.signupText}>Don't have an account? </Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate("Register")}>
               <Text style={styles.signupLinkText}>Sign Up</Text>
             </TouchableOpacity>
           </View>
@@ -192,27 +200,27 @@ const LoginScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#EEE',
+    borderBottomColor: "#EEE",
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
   },
   backButton: {
     width: 40,
     height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   keyboardAvoidingView: {
     flex: 1,
@@ -222,28 +230,28 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   brandContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginVertical: 40,
   },
   brandName: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     marginTop: 10,
   },
   brandTagline: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
     marginTop: 5,
   },
   formContainer: {
     marginBottom: 30,
   },
   inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#DDD',
+    borderColor: "#DDD",
     borderRadius: 10,
     height: 55,
     paddingHorizontal: 15,
@@ -255,107 +263,111 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: '#333',
+    color: "#333",
   },
   visibilityToggle: {
     padding: 5,
   },
   forgotPasswordButton: {
-    alignSelf: 'flex-end',
+    alignSelf: "flex-end",
     marginBottom: 20,
   },
   forgotPasswordText: {
-    color: '#E63946',
+    color: "#E63946",
     fontSize: 14,
   },
   loginButton: {
-    backgroundColor: '#E63946',
+    backgroundColor: "#E63946",
     height: 55,
     borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 3,
   },
   disabledButton: {
-    backgroundColor: '#F5A5A5',
+    backgroundColor: "#F5A5A5",
   },
   loginButtonText: {
-    color: '#FFF',
+    color: "#FFF",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginVertical: 25,
   },
   divider: {
     flex: 1,
     height: 1,
-    backgroundColor: '#DDD',
+    backgroundColor: "#DDD",
   },
   dividerText: {
-    color: '#999',
+    color: "#999",
     paddingHorizontal: 10,
   },
   socialButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   socialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     height: 50,
     borderWidth: 1,
-    borderColor: '#DDD',
+    borderColor: "#DDD",
     borderRadius: 10,
     paddingHorizontal: 20,
     flex: 0.48,
   },
   googleButton: {
-    borderColor: '#DADCE0',
-    backgroundColor: '#FFF',
+    borderColor: "#DADCE0",
+    backgroundColor: "#FFF",
   },
   facebookButton: {
-    borderColor: '#3b5998',
-    backgroundColor: '#FFF',
+    borderColor: "#3b5998",
+    backgroundColor: "#FFF",
   },
   socialButtonText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
     marginLeft: 10,
   },
   signupContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
     marginTop: 20,
   },
   signupText: {
-    color: '#666',
+    color: "#666",
     fontSize: 14,
   },
   signupLinkText: {
-    color: '#E63946',
+    color: "#E63946",
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   loginInfoContainer: {
-    backgroundColor: '#F9F9F9',
-    padding: 10,
+    backgroundColor: "#F9F9F9",
+    padding: 12,
     borderRadius: 5,
     marginBottom: 15,
     borderLeftWidth: 3,
-    borderLeftColor: '#E63946',
+    borderLeftColor: "#E63946",
   },
   loginInfoText: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
     lineHeight: 18,
+  },
+  loginInfoHeader: {
+    fontWeight: "bold",
+    color: "#333",
   },
 });
 
