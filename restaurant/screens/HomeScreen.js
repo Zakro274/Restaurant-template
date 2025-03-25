@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect  } from "react";
 import {
   StyleSheet,
   View,
@@ -8,7 +8,10 @@ import {
   TouchableOpacity,
   Dimensions,
   ImageBackground,
+  ActivityIndicator,
 } from "react-native";
+import { firestore } from '../config/firebase';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/Ionicons";
 import { useAuth } from '../context/AuthContext';
@@ -17,88 +20,10 @@ const { width } = Dimensions.get("window");
 
 const HomeScreen = ({ navigation }) => {
   const [activeCategory, setActiveCategory] = useState("All");
+  const [featuredItems, setFeaturedItems] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const { isLoggedIn, userData } = useAuth();
-
-  const categories = [
-    "All",
-    "Popular",
-    "Pizza",
-    "Burgers",
-    "Pasta",
-    "Desserts",
-  ];
-
-  const featuredItems = [
-    {
-      id: 1,
-      name: "Supreme Pizza",
-      description: "Fresh dough, homemade sauce, premium toppings",
-      price: "$14.99",
-      image: require("../assets/placeholder-pizza.jpg"),
-      rating: 4.8,
-      reviews: 127,
-      calories: 285,
-      prepTime: "15-20 min",
-      ingredients: [
-        "Fresh dough",
-        "Tomato sauce",
-        "Mozzarella cheese",
-        "Pepperoni",
-        "Italian sausage",
-        "Bell peppers",
-        "Olives",
-        "Red onions",
-        "Oregano",
-      ],
-      allergens: ["Wheat", "Dairy"],
-      spicyLevel: "Mild",
-    },
-    {
-      id: 2,
-      name: "Signature Burger",
-      description: "Angus beef, special sauce, brioche bun",
-      price: "$12.99",
-      image: require("../assets/placeholder-burger.jpg"),
-      rating: 4.7,
-      reviews: 98,
-      calories: 450,
-      prepTime: "10-15 min",
-      ingredients: [
-        "Angus beef patty",
-        "Brioche bun",
-        "Lettuce",
-        "Tomato",
-        "Cheddar cheese",
-        "Special sauce",
-        "Pickles",
-        "Red onion",
-      ],
-      allergens: ["Wheat", "Dairy", "Egg"],
-      spicyLevel: "Medium",
-    },
-    {
-      id: 3,
-      name: "Pasta Carbonara",
-      description: "Creamy sauce, pancetta, fresh pasta",
-      price: "$13.99",
-      image: require("../assets/placeholder-pasta.jpg"),
-      rating: 4.6,
-      reviews: 86,
-      calories: 380,
-      prepTime: "12-18 min",
-      ingredients: [
-        "Fresh pasta",
-        "Pancetta",
-        "Parmesan cheese",
-        "Eggs",
-        "Black pepper",
-        "Garlic",
-        "Parsley",
-      ],
-      allergens: ["Wheat", "Dairy", "Egg"],
-      spicyLevel: "Mild",
-    },
-  ];
 
   const promotions = [
     {
@@ -122,6 +47,62 @@ const HomeScreen = ({ navigation }) => {
       validHours: "All day",
     },
   ];
+
+  useEffect(() => {
+    const fetchFeaturedItems = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        // Create a query to get only featured items
+        const featuredQuery = query(
+          collection(firestore, 'foodItems'),
+          where('featured', '==', true)
+        );
+        
+        const querySnapshot = await getDocs(featuredQuery);
+        
+        if (querySnapshot.empty) {
+          console.log('No featured items found');
+          setFeaturedItems([]);
+        } else {
+          // Map the Firestore documents to our app's data format
+          const items = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              name: data.name,
+              description: data.description,
+              price: `$${data.price.toFixed(2)}`,
+              // Handle image URLs from Firestore or use a placeholder
+              image: data.imageUrl ? { uri: data.imageUrl } : require("../assets/placeholder-pizza.jpg"),
+              rating: data.rating || 4.5,
+              reviews: data.reviews || 0,
+              calories: data.calories || 0,
+              prepTime: data.prepTime || "15-20 min",
+              ingredients: data.ingredients || [],
+              allergens: data.allergens || [],
+              spicyLevel: data.spicyLevel || "Mild",
+            };
+          });
+          
+          setFeaturedItems(items);
+        }
+      } catch (error) {
+        console.error("Error fetching featured items:", error);
+        setError("Failed to load featured items");
+        
+        // Set fallback featured items in case of error
+        setFeaturedItems([
+          // Your fallback items here
+        ]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchFeaturedItems();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -177,40 +158,62 @@ const HomeScreen = ({ navigation }) => {
         </TouchableOpacity>
 
         {/* Featured Items */}
-        <View style={styles.menuContainer}>
-          <Text style={styles.sectionTitle}>Featured Items</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.menuScrollView}
-          >
-            {featuredItems.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.menuItem}
-                onPress={() => navigation.navigate("ItemDescription", { item })}
-              >
-                <Image source={item.image} style={styles.menuItemImage} />
-                <View style={styles.menuItemContent}>
-                  <View style={styles.menuItemRating}>
-                    <Icon name="star" size={16} color="#FFD700" />
-                    <Text style={styles.menuItemRatingText}>{item.rating}</Text>
-                  </View>
-                  <Text style={styles.menuItemName}>{item.name}</Text>
-                  <Text style={styles.menuItemDescription} numberOfLines={2}>
-                    {item.description}
-                  </Text>
-                  <View style={styles.menuItemFooter}>
-                    <Text style={styles.menuItemPrice}>{item.price}</Text>
-                    <TouchableOpacity style={styles.addButton}>
-                      <Icon name="add" size={20} color="#FFF" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
+<View style={styles.menuContainer}>
+  <Text style={styles.sectionTitle}>Featured Items</Text>
+  
+  {isLoading ? (
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color="#E63946" />
+      <Text style={styles.loadingText}>Loading featured items...</Text>
+    </View>
+  ) : error ? (
+    <View style={styles.errorContainer}>
+      <Icon name="alert-circle-outline" size={40} color="#E63946" />
+      <Text style={styles.errorText}>{error}</Text>
+    </View>
+  ) : featuredItems.length === 0 ? (
+    <View style={styles.emptyContainer}>
+      <Icon name="restaurant-outline" size={40} color="#999" />
+      <Text style={styles.emptyText}>No featured items available</Text>
+    </View>
+  ) : (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.menuScrollView}
+    >
+      {featuredItems.map((item) => (
+        <TouchableOpacity
+          key={item.id}
+          style={styles.menuItem}
+          onPress={() => navigation.navigate("ItemDescription", { item })}
+        >
+          <Image 
+            source={item.image} 
+            style={styles.menuItemImage}
+            defaultSource={require("../assets/placeholder-pizza.jpg")}
+          />
+          <View style={styles.menuItemContent}>
+            <View style={styles.menuItemRating}>
+              <Icon name="star" size={16} color="#FFD700" />
+              <Text style={styles.menuItemRatingText}>{item.rating}</Text>
+            </View>
+            <Text style={styles.menuItemName}>{item.name}</Text>
+            <Text style={styles.menuItemDescription} numberOfLines={2}>
+              {item.description}
+            </Text>
+            <View style={styles.menuItemFooter}>
+              <Text style={styles.menuItemPrice}>{item.price}</Text>
+              <TouchableOpacity style={styles.addButton}>
+                <Icon name="add" size={20} color="#FFF" />
               </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+            </View>
+          </View>
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
+  )}
+</View>
 
         {/* Promotions */}
         <View style={styles.promotionsContainer}>
@@ -462,6 +465,42 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "500",
     color: "#333",
+  },
+  // Add these new styles
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 30,
+    height: 200,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: '#666',
+  },
+  errorContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 30,
+    height: 200,
+  },
+  errorText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: '#E63946',
+    textAlign: 'center',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 30,
+    height: 200,
+  },
+  emptyText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
   },
 });
 
