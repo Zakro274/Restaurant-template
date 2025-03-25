@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   StyleSheet,
   View,
@@ -7,47 +7,55 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
-  SafeAreaView
-} from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
+  SafeAreaView,
+} from "react-native";
+import Icon from "react-native-vector-icons/Ionicons";
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
 const ItemDescriptionScreen = ({ route, navigation }) => {
   const { item } = route.params || {
     id: 1,
-    name: 'Supreme Pizza',
-    description: 'Fresh dough, homemade sauce, premium toppings including pepperoni, sausage, bell peppers, olives, and onions. Our signature item prepared in a brick oven.',
-    price: '$14.99',
-    image: require('../assets/placeholder-pizza.jpg'),
+    name: "Supreme Pizza",
+    description:
+      "Fresh dough, homemade sauce, premium toppings including pepperoni, sausage, bell peppers, olives, and onions. Our signature item prepared in a brick oven.",
+    price: "$14.99",
+    image: require("../assets/placeholder-pizza.jpg"),
     rating: 4.8,
     reviews: 127,
     calories: 285,
-    prepTime: '15-20 min',
+    prepTime: "15-20 min",
     ingredients: [
-      'Fresh dough', 'Tomato sauce', 'Mozzarella cheese', 'Pepperoni',
-      'Italian sausage', 'Bell peppers', 'Olives', 'Red onions', 'Oregano'
+      "Fresh dough",
+      "Tomato sauce",
+      "Mozzarella cheese",
+      "Pepperoni",
+      "Italian sausage",
+      "Bell peppers",
+      "Olives",
+      "Red onions",
+      "Oregano",
     ],
-    allergens: ['Wheat', 'Dairy'],
-    spicyLevel: 'Mild'
+    allergens: ["Wheat", "Dairy"],
+    spicyLevel: "Mild",
   };
 
   const [quantity, setQuantity] = useState(1);
-  const [selectedSize, setSelectedSize] = useState('Medium');
+  const [selectedSize, setSelectedSize] = useState("Medium");
   const [selectedExtras, setSelectedExtras] = useState([]);
 
   const sizes = [
-    { name: 'Small', price: '-$2.00' },
-    { name: 'Medium', price: '' },
-    { name: 'Large', price: '+$3.00' },
-    { name: 'X-Large', price: '+$5.00' }
+    { name: "Small", price: "-$2.00" },
+    { name: "Medium", price: "" },
+    { name: "Large", price: "+$3.00" },
+    { name: "X-Large", price: "+$5.00" },
   ];
 
   const extras = [
-    { name: 'Extra Cheese', price: '+$1.50' },
-    { name: 'Double Pepperoni', price: '+$2.00' },
-    { name: 'Garlic Crust', price: '+$1.00' },
-    { name: 'Truffle Oil', price: '+$3.00' }
+    { name: "Extra Cheese", price: "+$1.50" },
+    { name: "Double Pepperoni", price: "+$2.00" },
+    { name: "Garlic Crust", price: "+$1.00" },
+    { name: "Truffle Oil", price: "+$3.00" },
   ];
 
   const incrementQuantity = () => setQuantity(quantity + 1);
@@ -57,26 +65,26 @@ const ItemDescriptionScreen = ({ route, navigation }) => {
 
   const toggleExtra = (extraName) => {
     if (selectedExtras.includes(extraName)) {
-      setSelectedExtras(selectedExtras.filter(name => name !== extraName));
+      setSelectedExtras(selectedExtras.filter((name) => name !== extraName));
     } else {
       setSelectedExtras([...selectedExtras, extraName]);
     }
   };
 
   const calculateTotalPrice = () => {
-    let basePrice = parseFloat(item.price.replace('$', ''));
-    
+    let basePrice = parseFloat(item.price.replace("$", ""));
+
     // Add size adjustments
-    if (selectedSize === 'Small') basePrice -= 2;
-    if (selectedSize === 'Large') basePrice += 3;
-    if (selectedSize === 'X-Large') basePrice += 5;
-    
+    if (selectedSize === "Small") basePrice -= 2;
+    if (selectedSize === "Large") basePrice += 3;
+    if (selectedSize === "X-Large") basePrice += 5;
+
     // Add extras
-    if (selectedExtras.includes('Extra Cheese')) basePrice += 1.5;
-    if (selectedExtras.includes('Double Pepperoni')) basePrice += 2;
-    if (selectedExtras.includes('Garlic Crust')) basePrice += 1;
-    if (selectedExtras.includes('Truffle Oil')) basePrice += 3;
-    
+    if (selectedExtras.includes("Extra Cheese")) basePrice += 1.5;
+    if (selectedExtras.includes("Double Pepperoni")) basePrice += 2;
+    if (selectedExtras.includes("Garlic Crust")) basePrice += 1;
+    if (selectedExtras.includes("Truffle Oil")) basePrice += 3;
+
     // Multiply by quantity
     return (basePrice * quantity).toFixed(2);
   };
@@ -85,8 +93,8 @@ const ItemDescriptionScreen = ({ route, navigation }) => {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
+        <TouchableOpacity
+          style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
           <Icon name="arrow-back" size={24} color="#333" />
@@ -101,7 +109,7 @@ const ItemDescriptionScreen = ({ route, navigation }) => {
         {/* Item Image */}
         <View style={styles.imageContainer}>
           <Image source={item.image} style={styles.itemImage} />
-          
+
           {/* Rating Badge */}
           <View style={styles.ratingBadge}>
             <Icon name="star" size={16} color="#FFD700" />
@@ -115,7 +123,7 @@ const ItemDescriptionScreen = ({ route, navigation }) => {
           <Text style={styles.itemName}>{item.name}</Text>
           <Text style={styles.itemPrice}>{item.price}</Text>
         </View>
-        
+
         <Text style={styles.itemDescription}>{item.description}</Text>
 
         {/* Item Details */}
@@ -172,14 +180,14 @@ const ItemDescriptionScreen = ({ route, navigation }) => {
                 key={index}
                 style={[
                   styles.sizeOption,
-                  selectedSize === size.name && styles.selectedSizeOption
+                  selectedSize === size.name && styles.selectedSizeOption,
                 ]}
                 onPress={() => setSelectedSize(size.name)}
               >
                 <Text
                   style={[
                     styles.sizeText,
-                    selectedSize === size.name && styles.selectedSizeText
+                    selectedSize === size.name && styles.selectedSizeText,
                   ]}
                 >
                   {size.name}
@@ -188,7 +196,7 @@ const ItemDescriptionScreen = ({ route, navigation }) => {
                   <Text
                     style={[
                       styles.sizePrice,
-                      selectedSize === size.name && styles.selectedSizeText
+                      selectedSize === size.name && styles.selectedSizeText,
                     ]}
                   >
                     {size.price}
@@ -208,7 +216,8 @@ const ItemDescriptionScreen = ({ route, navigation }) => {
                 key={index}
                 style={[
                   styles.extraItem,
-                  selectedExtras.includes(extra.name) && styles.selectedExtraItem
+                  selectedExtras.includes(extra.name) &&
+                    styles.selectedExtraItem,
                 ]}
                 onPress={() => toggleExtra(extra.name)}
               >
@@ -223,7 +232,8 @@ const ItemDescriptionScreen = ({ route, navigation }) => {
                   <Text
                     style={[
                       styles.extraName,
-                      selectedExtras.includes(extra.name) && styles.selectedExtraText
+                      selectedExtras.includes(extra.name) &&
+                        styles.selectedExtraText,
                     ]}
                   >
                     {extra.name}
@@ -231,7 +241,8 @@ const ItemDescriptionScreen = ({ route, navigation }) => {
                   <Text
                     style={[
                       styles.extraPrice,
-                      selectedExtras.includes(extra.name) && styles.selectedExtraText
+                      selectedExtras.includes(extra.name) &&
+                        styles.selectedExtraText,
                     ]}
                   >
                     {extra.price}
@@ -284,104 +295,104 @@ const ItemDescriptionScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: "#F5F5F5",
   },
   header: {
-    top:10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    top: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 20,
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
   },
   backButton: {
     width: 40,
     height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   favoriteButton: {
     width: 40,
     height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   imageContainer: {
-    width: '100%',
+    width: "100%",
     height: 250,
-    position: 'relative',
+    position: "relative",
   },
   itemImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
   },
   ratingBadge: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 15,
     right: 15,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFF",
     paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 20,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 3,
     elevation: 3,
   },
   ratingText: {
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     marginLeft: 4,
   },
   reviewCount: {
-    color: '#666',
+    color: "#666",
     fontSize: 12,
     marginLeft: 3,
   },
   infoContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 10,
   },
   itemName: {
     fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     flex: 1,
   },
   itemPrice: {
     fontSize: 22,
-    fontWeight: 'bold',
-    color: '#E63946',
+    fontWeight: "bold",
+    color: "#E63946",
   },
   itemDescription: {
     paddingHorizontal: 20,
     marginBottom: 20,
     fontSize: 14,
     lineHeight: 22,
-    color: '#555',
+    color: "#555",
   },
   detailsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+    flexDirection: "row",
+    justifyContent: "space-around",
     paddingVertical: 15,
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     marginHorizontal: 20,
     borderRadius: 10,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -389,18 +400,18 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   detailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   detailText: {
     marginLeft: 5,
     fontSize: 14,
-    color: '#333',
+    color: "#333",
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     marginBottom: 10,
   },
   allergenContainer: {
@@ -408,136 +419,136 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   allergenList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
   },
   allergenItem: {
-    backgroundColor: '#FFF0F0',
+    backgroundColor: "#FFF0F0",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 15,
     marginRight: 10,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#FFD0D0',
+    borderColor: "#FFD0D0",
   },
   allergenText: {
-    color: '#E63946',
+    color: "#E63946",
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   ingredientsContainer: {
     paddingHorizontal: 20,
     marginBottom: 20,
   },
   ingredientList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
   },
   ingredientItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '50%',
+    flexDirection: "row",
+    alignItems: "center",
+    width: "50%",
     marginBottom: 10,
   },
   ingredientText: {
     marginLeft: 8,
     fontSize: 14,
-    color: '#555',
+    color: "#555",
   },
   sizeContainer: {
     paddingHorizontal: 20,
     marginBottom: 20,
   },
   sizeOptions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   sizeOption: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 12,
     marginHorizontal: 5,
     borderWidth: 1,
-    borderColor: '#DDD',
+    borderColor: "#DDD",
     borderRadius: 8,
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
   },
   selectedSizeOption: {
-    borderColor: '#E63946',
-    backgroundColor: '#FFEFEF',
+    borderColor: "#E63946",
+    backgroundColor: "#FFEFEF",
   },
   sizeText: {
     fontSize: 14,
-    color: '#333',
-    fontWeight: '500',
+    color: "#333",
+    fontWeight: "500",
   },
   sizePrice: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
     marginTop: 4,
   },
   selectedSizeText: {
-    color: '#E63946',
-    fontWeight: 'bold',
+    color: "#E63946",
+    fontWeight: "bold",
   },
   extrasContainer: {
     paddingHorizontal: 20,
     marginBottom: 20,
   },
   extrasList: {
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     borderRadius: 10,
-    overflow: 'hidden',
-    shadowColor: '#000',
+    overflow: "hidden",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
   },
   extraItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 12,
     paddingHorizontal: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#EEE',
+    borderBottomColor: "#EEE",
   },
   selectedExtraItem: {
-    backgroundColor: '#FFEFEF',
+    backgroundColor: "#FFEFEF",
   },
   extraCheckbox: {
     marginRight: 10,
   },
   extraInfo: {
     flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   extraName: {
     fontSize: 14,
-    color: '#333',
+    color: "#333",
   },
   extraPrice: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
   },
   selectedExtraText: {
-    color: '#E63946',
-    fontWeight: '500',
+    color: "#E63946",
+    fontWeight: "500",
   },
   quantityContainer: {
     paddingHorizontal: 20,
     marginBottom: 20,
   },
   quantitySelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFF',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFF",
     borderRadius: 10,
     paddingVertical: 10,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -546,60 +557,60 @@ const styles = StyleSheet.create({
   quantityButton: {
     width: 40,
     height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F0F0F0',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F0F0F0",
     borderRadius: 20,
   },
   quantityText: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginHorizontal: 20,
     width: 40,
-    textAlign: 'center',
+    textAlign: "center",
   },
   addToCartContainer: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 15,
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     borderTopWidth: 1,
-    borderTopColor: '#EEE',
-    shadowColor: '#000',
+    borderTopColor: "#EEE",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 10,
   },
   totalPriceContainer: {
-    flexDirection: 'column',
+    flexDirection: "column",
   },
   totalLabel: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
   },
   totalPrice: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
   },
   addToCartButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E63946',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#E63946",
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 10,
   },
   addToCartText: {
-    color: '#FFF',
-    fontWeight: 'bold',
+    color: "#FFF",
+    fontWeight: "bold",
     fontSize: 16,
     marginLeft: 8,
   },
