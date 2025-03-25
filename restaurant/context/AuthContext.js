@@ -19,10 +19,10 @@ export const AuthProvider = ({ children }) => {
         
         // Create user data object from Firebase user
         const userDataObj = {
-          name: user.displayName || 'User',
+          name: user.displayName || '',
           email: user.email,
-          phone: user.phoneNumber || '+1 (555) 123-4567',
-          address: '123 Main St, Anytown, USA', // Default value, would come from Firestore in a real app
+          phone: user.phoneNumber || '',
+          address: '', // Default value, would come from Firestore in a real app
           profileImage: require('../assets/placeholder-profile.jpg'),
           favoriteItems: 0,
           pastOrders: 0,
