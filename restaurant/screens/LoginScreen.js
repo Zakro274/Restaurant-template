@@ -8,10 +8,13 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { auth } from '../config/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useAuth } from '../context/AuthContext';
 
 const LoginScreen = ({ navigation }) => {
@@ -19,16 +22,49 @@ const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert('Error', 'Please enter both email and password');
       return;
     }
     
-    // Pass email and password to login function
-    login(email, password);
-    navigation.goBack();
+    setIsLoading(true);
+    
+    try {
+      // Firebase authentication
+      await signInWithEmailAndPassword(auth, email, password);
+      
+      // If login is successful, go back to previous screen
+      navigation.goBack();
+    } catch (error) {
+      let errorMessage = 'Authentication failed';
+      
+      // Handle specific Firebase auth error codes
+      switch(error.code) {
+        case 'auth/invalid-email':
+          errorMessage = 'The email address is not valid.';
+          break;
+        case 'auth/user-disabled':
+          errorMessage = 'This user account has been disabled.';
+          break;
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+          errorMessage = 'Invalid email or password.';
+          break;
+        case 'auth/too-many-requests':
+          errorMessage = 'Too many unsuccessful login attempts. Please try again later.';
+          break;
+        default:
+          errorMessage = 'An error occurred during login. Please try again.';
+      }
+      
+      Alert.alert('Login Failed', errorMessage);
+      console.error('Login error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -68,6 +104,7 @@ const LoginScreen = ({ navigation }) => {
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                editable={!isLoading}
               />
             </View>
 
@@ -80,10 +117,12 @@ const LoginScreen = ({ navigation }) => {
                 onChangeText={setPassword}
                 secureTextEntry={!isPasswordVisible}
                 autoCapitalize="none"
+                editable={!isLoading}
               />
               <TouchableOpacity 
-                onPress={() => setIsPasswordVisible(!isPasswordVisible)}
                 style={styles.visibilityToggle}
+                onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+                disabled={isLoading}
               >
                 <Icon 
                   name={isPasswordVisible ? "eye-off-outline" : "eye-outline"} 
@@ -95,9 +134,9 @@ const LoginScreen = ({ navigation }) => {
 
             <View style={styles.loginInfoContainer}>
               <Text style={styles.loginInfoText}>
-                Manager Credentials: 
+                For demo purposes:
                 {"\n"}Email: manager@restaurant.com 
-                {"\n"}Password: manager123
+                {"\n"}Password: password
               </Text>
             </View>
 
@@ -106,10 +145,15 @@ const LoginScreen = ({ navigation }) => {
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={styles.loginButton}
+              style={[styles.loginButton, isLoading && styles.disabledButton]}
               onPress={handleLogin}
+              disabled={isLoading}
             >
-              <Text style={styles.loginButtonText}>Sign In</Text>
+              {isLoading ? (
+                <ActivityIndicator color="#FFF" size="small" />
+              ) : (
+                <Text style={styles.loginButtonText}>Sign In</Text>
+              )}
             </TouchableOpacity>
 
             {/* Social Login Options */}
@@ -235,6 +279,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 3,
+  },
+  disabledButton: {
+    backgroundColor: '#F5A5A5',
   },
   loginButtonText: {
     color: '#FFF',
