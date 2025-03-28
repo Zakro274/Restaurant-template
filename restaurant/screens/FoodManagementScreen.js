@@ -12,49 +12,48 @@ import {
   ScrollView,
   Switch,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
+import { firestore, storage } from '../config/firebase';
+import { 
+  collection, 
+  getDocs, 
+  doc, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  serverTimestamp 
+} from 'firebase/firestore';
+import { 
+  deleteObject, 
+  ref as storageRef,
+  uploadBytes,
+  getDownloadURL
+} from 'firebase/storage';
+import * as ImagePicker from 'expo-image-picker';
 
 const FoodManagementScreen = ({ navigation }) => {
+  // Auth context
   const { isManager } = useAuth();
-  const [foodItems, setFoodItems] = useState([
-    {
-      id: 1,
-      name: 'Pepperoni Pizza',
-      description: 'Classic pepperoni with mozzarella',
-      price: '12.99',
-      image: require('../assets/placeholder-pizza.jpg'),
-      category: 'Pizza',
-      available: true
-    },
-    {
-      id: 2,
-      name: 'Classic Cheeseburger',
-      description: 'Beef patty with cheese and special sauce',
-      price: '10.99',
-      image: require('../assets/placeholder-burger.jpg'),
-      category: 'Burgers',
-      available: true
-    },
-    {
-      id: 3,
-      name: 'Caesar Salad',
-      description: 'Romaine lettuce with croutons and dressing',
-      price: '8.99',
-      image: require('../assets/placeholder-salad.jpg'),
-      category: 'Salads',
-      available: true
-    }
-  ]);
-  
+
+  // State variables
+  const [foodItems, setFoodItems] = useState([]);
+  const [filteredItems, setFilteredItems] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterCategory, setFilterCategory] = useState('All');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentItem, setCurrentItem] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterCategory, setFilterCategory] = useState('All');
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  // Form state
   const [newItem, setNewItem] = useState({
     name: '',
     description: '',
@@ -63,28 +62,67 @@ const FoodManagementScreen = ({ navigation }) => {
     available: true
   });
   
+  // Categories list
   const categories = [
     'All', 'Pizza', 'Burgers', 'Salads', 'Pasta', 'Desserts', 'Drinks'
   ];
 
-  // Check if user is manager when screen mounts
+  // Check if user is manager and fetch food items when screen mounts
   useEffect(() => {
     if (!isManager) {
       Alert.alert('Access Denied', 'You do not have permission to access this area.');
       navigation.goBack();
+    } else {
+      fetchFoodItems();
     }
   }, [isManager, navigation]);
 
-  // Filter food items based on search query and category
-  const filteredItems = foodItems.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         item.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = filterCategory === 'All' || item.category === filterCategory;
-    
-    return matchesSearch && matchesCategory;
-  });
+  // Apply filters when search query or category changes
+  useEffect(() => {
+    filterItems();
+  }, [searchQuery, filterCategory, foodItems]);
 
-  const resetNewItem = () => {
+  // Fetch food items from Firestore
+  const fetchFoodItems = async () => {
+    try {
+      setIsLoading(true);
+      const foodItemsCollection = collection(firestore, 'foodItems');
+      const snapshot = await getDocs(foodItemsCollection);
+      
+      const items = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        // Use the image URL from Firestore or fallback to local image
+        image: doc.data().imageUrl 
+          ? { uri: doc.data().imageUrl } 
+          : require('../assets/placeholder-pizza.jpg'),
+        price: doc.data().price?.toString() || '0'
+      }));
+      
+      setFoodItems(items);
+    } catch (error) {
+      console.error('Error fetching food items:', error);
+      Alert.alert('Error', 'Failed to load food items from the database.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Filter food items based on search query and category
+  const filterItems = () => {
+    const filtered = foodItems.filter(item => {
+      const matchesSearch = item.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                           item.description?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = filterCategory === 'All' || item.category === filterCategory;
+      
+      return matchesSearch && matchesCategory;
+    });
+    
+    setFilteredItems(filtered);
+  };
+
+  // Reset form state
+  const resetForm = () => {
     setNewItem({
       name: '',
       description: '',
@@ -92,99 +130,283 @@ const FoodManagementScreen = ({ navigation }) => {
       category: 'Pizza',
       available: true
     });
-  };
-
-  const handleAddItem = () => {
-    // Validate form fields
-    if (!newItem.name.trim()) {
-      Alert.alert('Error', 'Please enter a food item name');
-      return;
-    }
-    
-    if (!newItem.description.trim()) {
-      Alert.alert('Error', 'Please enter a description');
-      return;
-    }
-    
-    if (!newItem.price.trim() || isNaN(parseFloat(newItem.price))) {
-      Alert.alert('Error', 'Please enter a valid price');
-      return;
-    }
-
-    // Create new item with unique ID
-    const newId = foodItems.length > 0 
-      ? Math.max(...foodItems.map(item => item.id)) + 1 
-      : 1;
-      
-    const itemToAdd = {
-      ...newItem,
-      id: newId,
-      price: parseFloat(newItem.price).toFixed(2),
-      image: require('../assets/placeholder-pizza.jpg'), // Default image
-    };
-
-    // Add new item to list
-    setFoodItems([...foodItems, itemToAdd]);
-    resetNewItem();
-    setModalVisible(false);
-    
-    Alert.alert('Success', 'Food item added successfully');
-  };
-
-  const handleUpdateItem = () => {
-    if (!currentItem) return;
-    
-    // Validate form fields
-    if (!newItem.name.trim()) {
-      Alert.alert('Error', 'Please enter a food item name');
-      return;
-    }
-    
-    if (!newItem.description.trim()) {
-      Alert.alert('Error', 'Please enter a description');
-      return;
-    }
-    
-    if (!newItem.price.trim() || isNaN(parseFloat(newItem.price))) {
-      Alert.alert('Error', 'Please enter a valid price');
-      return;
-    }
-
-    // Update the item in the list
-    const updatedItems = foodItems.map(item => 
-      item.id === currentItem.id 
-        ? { 
-            ...item, 
-            name: newItem.name,
-            description: newItem.description,
-            price: parseFloat(newItem.price).toFixed(2),
-            category: newItem.category,
-            available: newItem.available
-          } 
-        : item
-    );
-
-    setFoodItems(updatedItems);
-    resetNewItem();
+    setSelectedImage(null);
     setCurrentItem(null);
     setEditMode(false);
-    setModalVisible(false);
-    
-    Alert.alert('Success', 'Food item updated successfully');
   };
 
+  // Image picker function
+  const pickImage = async () => {
+    try {
+      // Request permissions
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required', 
+          'Please grant camera roll permissions to upload images.'
+        );
+        return;
+      }
+      
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+      
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setSelectedImage(result.assets[0]);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to select image. Please try again.');
+    }
+  };
+
+  // Upload image to Firebase Storage
+  const uploadImage = async (imageUri, itemId) => {
+    if (!imageUri) return null;
+    
+    try {
+      setUploadingImage(true);
+      
+      // Convert image URI to blob
+      const response = await fetch(imageUri);
+      const blob = await response.blob();
+      
+      // Create a unique filename
+      const filename = `foodItems/images/${itemId || Date.now()}.${imageUri.split('.').pop()}`;
+      const imageRef = storageRef(storage, filename);
+      
+      // Upload to Firebase Storage
+      await uploadBytes(imageRef, blob);
+      
+      // Get download URL
+      const downloadURL = await getDownloadURL(imageRef);
+      
+      return downloadURL;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      throw error;
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  // Delete image from Firebase Storage
+  const deleteImage = async (imageUrl) => {
+    if (!imageUrl) return;
+    
+    try {
+      console.log('Attempting to delete image:', imageUrl);
+      
+      // Check for different URL formats
+      let filePath = null;
+      const standardFormatMatch = imageUrl.match(/o\/(.+?)\?/);
+      
+      if (standardFormatMatch && standardFormatMatch[1]) {
+        // Standard Firebase storage URL
+        filePath = decodeURIComponent(standardFormatMatch[1]);
+      } else if (imageUrl.includes('firebasestorage.app')) {
+        // URL format: https://storage.googleapis.com/rest-5c1f4.firebasestorage.app/foodItems/images/filename.jpeg
+        const urlParts = imageUrl.split('firebasestorage.app/');
+        if (urlParts.length > 1) {
+          filePath = urlParts[1];
+        }
+      }
+      
+      if (filePath) {
+        console.log('Extracted file path:', filePath);
+        const imageRef = storageRef(storage, filePath);
+        await deleteObject(imageRef);
+        console.log('Image deleted from storage:', filePath);
+        return true;
+      } else {
+        console.log('Could not extract file path from URL:', imageUrl);
+        return false;
+      }
+    } catch (error) {
+      console.error('Error deleting image from storage:', error);
+      return false;
+    }
+  };
+
+  // Handle adding a new food item
+  const handleAddItem = async () => {
+    // Validate form fields
+    if (!validateForm()) return;
+
+    try {
+      setIsSubmitting(true);
+
+      // Prepare data for Firestore
+      const itemData = {
+        name: newItem.name.trim(),
+        description: newItem.description.trim(),
+        price: parseFloat(newItem.price),
+        category: newItem.category,
+        available: newItem.available,
+        imageUrl: '',
+        featured: false,
+        rating: 4.5,
+        reviews: 0,
+        calories: 0,
+        prepTime: '15-20 min',
+        ingredients: [],
+        allergens: [],
+        spicyLevel: 'Mild',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+
+      // Add to Firestore first to get the document ID
+      const docRef = await addDoc(collection(firestore, 'foodItems'), itemData);
+      const newItemId = docRef.id;
+      
+      // Upload image if selected
+      let imageUrl = '';
+      if (selectedImage) {
+        imageUrl = await uploadImage(selectedImage.uri, newItemId);
+        
+        // Update the document with the image URL
+        if (imageUrl) {
+          await updateDoc(doc(firestore, 'foodItems', newItemId), {
+            imageUrl: imageUrl
+          });
+          itemData.imageUrl = imageUrl;
+        }
+      }
+      
+      // Update local state with new item
+      const newItemWithId = {
+        id: newItemId,
+        ...itemData,
+        image: selectedImage ? { uri: selectedImage.uri } : require('../assets/placeholder-pizza.jpg'),
+        price: itemData.price.toString()
+      };
+      
+      setFoodItems([...foodItems, newItemWithId]);
+      resetForm();
+      setModalVisible(false);
+      
+      Alert.alert('Success', 'Food item added successfully to the database');
+    } catch (error) {
+      console.error('Error adding food item:', error);
+      Alert.alert('Error', 'Failed to add food item to the database');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle updating an existing food item
+  const handleUpdateItem = async () => {
+    if (!currentItem || !validateForm()) return;
+
+    try {
+      setIsSubmitting(true);
+
+      // Prepare data for update
+      const itemData = {
+        name: newItem.name.trim(),
+        description: newItem.description.trim(),
+        price: parseFloat(newItem.price),
+        category: newItem.category,
+        available: newItem.available,
+        updatedAt: serverTimestamp()
+      };
+
+      // Handle image update if necessary
+      let imageUrl = currentItem.imageUrl || '';
+      
+      // If there's a new image or the current image was removed
+      if (selectedImage) {
+        if (!currentItem.imageUrl || selectedImage.uri !== currentItem.imageUrl) {
+          // Delete old image if it exists
+          if (currentItem.imageUrl) {
+            await deleteImage(currentItem.imageUrl);
+          }
+          
+          // Upload new image
+          imageUrl = await uploadImage(selectedImage.uri, currentItem.id);
+          if (imageUrl) {
+            itemData.imageUrl = imageUrl;
+          }
+        }
+      } else if (currentItem.imageUrl && !selectedImage) {
+        // Image was removed, delete it from storage
+        await deleteImage(currentItem.imageUrl);
+        itemData.imageUrl = '';
+      }
+
+      // Update in Firestore
+      const itemRef = doc(firestore, 'foodItems', currentItem.id);
+      await updateDoc(itemRef, itemData);
+      
+      // Update local state
+      const updatedItems = foodItems.map(item => 
+        item.id === currentItem.id 
+          ? { 
+              ...item, 
+              ...itemData,
+              image: selectedImage ? { uri: selectedImage.uri } : require('../assets/placeholder-pizza.jpg'),
+              price: itemData.price.toString(),
+              imageUrl: itemData.imageUrl
+            } 
+          : item
+      );
+
+      setFoodItems(updatedItems);
+      resetForm();
+      setModalVisible(false);
+      
+      Alert.alert('Success', 'Food item updated successfully in the database');
+    } catch (error) {
+      console.error('Error updating food item:', error);
+      Alert.alert('Error', 'Failed to update food item in the database');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle deleting a food item
   const handleDeleteItem = (id) => {
     Alert.alert(
       'Delete Item',
-      'Are you sure you want to delete this item?',
+      'Are you sure you want to delete this item? This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         { 
           text: 'Delete', 
-          onPress: () => {
-            const updatedItems = foodItems.filter(item => item.id !== id);
-            setFoodItems(updatedItems);
-            Alert.alert('Success', 'Item deleted successfully');
+          onPress: async () => {
+            try {
+              setIsLoading(true);
+              
+              // Find the item to get its imageUrl
+              const itemToDelete = foodItems.find(item => item.id === id);
+              
+              // Delete from Firestore
+              const itemRef = doc(firestore, 'foodItems', id);
+              await deleteDoc(itemRef);
+              
+              // Delete image from Storage if it exists
+              if (itemToDelete && itemToDelete.imageUrl) {
+                await deleteImage(itemToDelete.imageUrl);
+              }
+              
+              // Update local state
+              const updatedItems = foodItems.filter(item => item.id !== id);
+              setFoodItems(updatedItems);
+              
+              Alert.alert('Success', 'Item deleted successfully from the database');
+            } catch (error) {
+              console.error('Error deleting food item:', error);
+              Alert.alert('Error', 'Failed to delete food item from the database');
+            } finally {
+              setIsLoading(false);
+            }
           },
           style: 'destructive'
         }
@@ -192,27 +414,60 @@ const FoodManagementScreen = ({ navigation }) => {
     );
   };
 
+  // Handle editing a food item
   const handleEditItem = (item) => {
     setCurrentItem(item);
     setNewItem({
-      name: item.name,
-      description: item.description,
-      price: item.price,
-      category: item.category,
-      available: item.available
+      name: item.name || '',
+      description: item.description || '',
+      price: item.price || '',
+      category: item.category || 'Pizza',
+      available: item.available !== undefined ? item.available : true
     });
+    
+    // Set the image if it exists
+    if (item.imageUrl) {
+      setSelectedImage({ uri: item.imageUrl });
+    } else {
+      setSelectedImage(null);
+    }
+    
     setEditMode(true);
     setModalVisible(true);
+  };
+
+  // Validate form input
+  const validateForm = () => {
+    if (!newItem.name.trim()) {
+      Alert.alert('Error', 'Please enter a food item name');
+      return false;
+    }
+    
+    if (!newItem.description.trim()) {
+      Alert.alert('Error', 'Please enter a description');
+      return false;
+    }
+    
+    if (!newItem.price.trim() || isNaN(parseFloat(newItem.price))) {
+      Alert.alert('Error', 'Please enter a valid price');
+      return false;
+    }
+
+    return true;
   };
 
   // Render each food item in the list
   const renderFoodItem = ({ item }) => (
     <View style={styles.foodItem}>
-      <Image source={item.image} style={styles.foodImage} />
+      <Image 
+        source={item.image} 
+        style={styles.foodImage}
+        defaultSource={require('../assets/placeholder-pizza.jpg')}
+      />
       <View style={styles.foodInfo}>
         <View style={styles.foodHeader}>
           <Text style={styles.foodName}>{item.name}</Text>
-          <Text style={styles.foodPrice}>${item.price}</Text>
+          <Text style={styles.foodPrice}>${parseFloat(item.price).toFixed(2)}</Text>
         </View>
         <Text style={styles.foodDescription} numberOfLines={2}>
           {item.description}
@@ -246,6 +501,28 @@ const FoodManagementScreen = ({ navigation }) => {
     </View>
   );
 
+  // Loading screen
+  if (isLoading && foodItems.length === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={() => navigation.goBack()}
+          >
+            <Icon name="arrow-back" size={24} color="#333" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Food Management</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#E63946" />
+          <Text style={styles.loadingText}>Loading food items...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -260,8 +537,7 @@ const FoodManagementScreen = ({ navigation }) => {
         <TouchableOpacity 
           style={styles.addButton}
           onPress={() => {
-            resetNewItem();
-            setEditMode(false);
+            resetForm();
             setModalVisible(true);
           }}
         >
@@ -322,6 +598,8 @@ const FoodManagementScreen = ({ navigation }) => {
         keyExtractor={item => item.id.toString()}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
+        refreshing={isLoading}
+        onRefresh={fetchFoodItems}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Icon name="restaurant-outline" size={80} color="#DDD" />
@@ -340,7 +618,11 @@ const FoodManagementScreen = ({ navigation }) => {
         animationType="slide"
         transparent={true}
         visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
+        onRequestClose={() => {
+          if (!isSubmitting && !uploadingImage) {
+            setModalVisible(false);
+          }
+        }}
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -353,7 +635,13 @@ const FoodManagementScreen = ({ navigation }) => {
               </Text>
               <TouchableOpacity 
                 style={styles.closeButton}
-                onPress={() => setModalVisible(false)}
+                onPress={() => {
+                  if (!isSubmitting && !uploadingImage) {
+                    setModalVisible(false);
+                    resetForm();
+                  }
+                }}
+                disabled={isSubmitting || uploadingImage}
               >
                 <Icon name="close" size={24} color="#333" />
               </TouchableOpacity>
@@ -363,6 +651,38 @@ const FoodManagementScreen = ({ navigation }) => {
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.formContainer}
             >
+              {/* Image Upload Section */}
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Product Image</Text>
+                <View style={styles.imageUploadContainer}>
+                  {selectedImage ? (
+                    <View style={styles.imagePreviewContainer}>
+                      <Image
+                        source={{ uri: selectedImage.uri }}
+                        style={styles.imagePreview}
+                        resizeMode="cover"
+                      />
+                      <TouchableOpacity
+                        style={styles.removeImageButton}
+                        onPress={() => setSelectedImage(null)}
+                        disabled={isSubmitting || uploadingImage}
+                      >
+                        <Icon name="close-circle" size={24} color="#E63946" />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.uploadButton}
+                      onPress={pickImage}
+                      disabled={isSubmitting || uploadingImage}
+                    >
+                      <Icon name="image-outline" size={30} color="#999" />
+                      <Text style={styles.uploadText}>Select Image</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+
               {/* Name Field */}
               <View style={styles.formGroup}>
                 <Text style={styles.formLabel}>Name *</Text>
@@ -371,6 +691,7 @@ const FoodManagementScreen = ({ navigation }) => {
                   placeholder="Enter food item name"
                   value={newItem.name}
                   onChangeText={(text) => setNewItem({...newItem, name: text})}
+                  editable={!isSubmitting && !uploadingImage}
                 />
               </View>
 
@@ -384,6 +705,7 @@ const FoodManagementScreen = ({ navigation }) => {
                   onChangeText={(text) => setNewItem({...newItem, description: text})}
                   multiline={true}
                   numberOfLines={3}
+                  editable={!isSubmitting && !uploadingImage}
                 />
               </View>
 
@@ -396,6 +718,7 @@ const FoodManagementScreen = ({ navigation }) => {
                   value={newItem.price}
                   onChangeText={(text) => setNewItem({...newItem, price: text})}
                   keyboardType="decimal-pad"
+                  editable={!isSubmitting && !uploadingImage}
                 />
               </View>
 
@@ -415,6 +738,7 @@ const FoodManagementScreen = ({ navigation }) => {
                         newItem.category === category && styles.selectedCategoryOption
                       ]}
                       onPress={() => setNewItem({...newItem, category})}
+                      disabled={isSubmitting || uploadingImage}
                     >
                       <Text style={[
                         styles.categoryOptionText,
@@ -436,18 +760,32 @@ const FoodManagementScreen = ({ navigation }) => {
                     onValueChange={(value) => setNewItem({...newItem, available: value})}
                     trackColor={{ false: '#D0D0D0', true: '#FFD0D0' }}
                     thumbColor={newItem.available ? '#E63946' : '#F4F3F4'}
+                    disabled={isSubmitting || uploadingImage}
                   />
                 </View>
               </View>
 
               {/* Submit Button */}
               <TouchableOpacity 
-                style={styles.submitButton}
+                style={[
+                  styles.submitButton, 
+                  (isSubmitting || uploadingImage) && styles.disabledButton
+                ]}
                 onPress={editMode ? handleUpdateItem : handleAddItem}
+                disabled={isSubmitting || uploadingImage}
               >
-                <Text style={styles.submitButtonText}>
-                  {editMode ? 'Update Item' : 'Add Item'}
-                </Text>
+                {isSubmitting || uploadingImage ? (
+                  <View style={styles.loadingButtonContent}>
+                    <ActivityIndicator color="#FFF" size="small" />
+                    <Text style={styles.loadingButtonText}>
+                      {uploadingImage ? 'Uploading Image...' : 'Saving...'}
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={styles.submitButtonText}>
+                    {editMode ? 'Update Item' : 'Add Item'}
+                  </Text>
+                )}
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -749,8 +1087,71 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 30,
   },
+  disabledButton: {
+    backgroundColor: '#F5A5A5',
+  },
   submitButtonText: {
     color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+  },
+  imageUploadContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#DDD',
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#F5F5F5',
+  },
+  uploadButton: {
+    width: '100%',
+    height: 150,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  uploadText: {
+    marginTop: 10,
+    color: '#666',
+    fontSize: 14,
+  },
+  imagePreviewContainer: {
+    width: '100%',
+    height: 200,
+    position: 'relative',
+  },
+  imagePreview: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 10,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderRadius: 15,
+    padding: 5,
+  },
+  loadingButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingButtonText: {
+    color: '#FFF',
+    marginLeft: 10,
     fontSize: 16,
     fontWeight: 'bold',
   }

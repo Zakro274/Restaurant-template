@@ -212,9 +212,9 @@ const HomeScreen = ({ navigation }) => {
                     </Text>
                     <View style={styles.menuItemFooter}>
                       <Text style={styles.menuItemPrice}>{item.price}</Text>
-                      <TouchableOpacity style={styles.addButton}>
+                      {/* <TouchableOpacity style={styles.addButton}>
                         <Icon name="add" size={20} color="#FFF" />
-                      </TouchableOpacity>
+                      </TouchableOpacity> */}
                     </View>
                   </View>
                 </TouchableOpacity>
