@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -6,46 +6,121 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Alert
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useAuth } from '../context/AuthContext';
+import { firestore } from '../config/firebase';
+import { 
+  collection, 
+  query, 
+  where, 
+  getDocs, 
+  doc, 
+  updateDoc, 
+  deleteDoc,
+  addDoc,
+  serverTimestamp 
+} from 'firebase/firestore';
 
 const CartScreen = ({ navigation }) => {
-  // Sample cart items data - in a real app, this would come from a state management solution
-  const [cartItems, setCartItems] = useState([
-    {
-      id: 1,
-      name: 'Supreme Pizza',
-      price: 14.99,
-      quantity: 1,
-      image: require('../assets/placeholder-pizza.jpg'),
-      options: 'Medium, Extra Cheese'
-    },
-    {
-      id: 2,
-      name: 'Classic Cheeseburger',
-      price: 10.99,
-      quantity: 2,
-      image: require('../assets/placeholder-burger.jpg'),
-      options: 'Medium rare, No onions'
-    }
-  ]);
+  const { isLoggedIn, userData } = useAuth();
+  const [cartItems, setCartItems] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  // Calculate subtotal
+  // Calculate totals
   const subtotal = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
   const tax = subtotal * 0.08; // 8% tax
   const deliveryFee = 2.99;
   const total = subtotal + tax + deliveryFee;
 
-  const updateQuantity = (id, newQuantity) => {
-    if (newQuantity < 1) return;
-    
-    setCartItems(cartItems.map(item => 
-      item.id === id ? { ...item, quantity: newQuantity } : item
-    ));
+  // Fetch cart items when the screen loads
+  useEffect(() => {
+    fetchCartItems();
+  }, [isLoggedIn, userData]);
+
+  // Function to fetch cart items from Firestore
+  const fetchCartItems = async () => {
+    if (!isLoggedIn || !userData) {
+      setCartItems([]);
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      
+      // Query the cart collection for items belonging to the current user
+      const userId = userData.uid || (userData.email ? userData.email.replace(/[.@]/g, '_') : 'guest');
+      const cartRef = collection(firestore, 'carts');
+      const cartQuery = query(cartRef, where('userId', '==', userId));
+      
+      const querySnapshot = await getDocs(cartQuery);
+      
+      // Check if user has a cart
+      if (querySnapshot.empty) {
+        console.log('No items in cart');
+        setCartItems([]);
+        setIsLoading(false);
+        return;
+      }
+      
+      // Map the cart items to our app's format
+      const items = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        items.push({
+          id: doc.id,
+          name: data.name,
+          price: data.price,
+          quantity: data.quantity,
+          options: data.options || '',
+          image: data.imageUrl 
+            ? { uri: data.imageUrl } 
+            : require('../assets/placeholder-pizza.jpg'),
+          foodItemId: data.foodItemId
+        });
+      });
+      
+      setCartItems(items);
+    } catch (error) {
+      console.error('Error fetching cart items:', error);
+      Alert.alert('Error', 'Failed to load your cart items');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+  // Function to update item quantity in Firestore
+  const updateQuantity = async (id, newQuantity) => {
+    if (newQuantity < 1) return;
+    
+    try {
+      setIsUpdating(true);
+      
+      // Update in Firestore
+      const cartItemRef = doc(firestore, 'carts', id);
+      await updateDoc(cartItemRef, {
+        quantity: newQuantity,
+        updatedAt: serverTimestamp()
+      });
+      
+      // Update local state
+      setCartItems(cartItems.map(item => 
+        item.id === id ? { ...item, quantity: newQuantity } : item
+      ));
+    } catch (error) {
+      console.error('Error updating quantity:', error);
+      Alert.alert('Error', 'Failed to update item quantity');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Function to remove item from cart
   const removeItem = (id) => {
     Alert.alert(
       "Remove Item",
@@ -57,8 +132,22 @@ const CartScreen = ({ navigation }) => {
         },
         { 
           text: "Remove", 
-          onPress: () => {
-            setCartItems(cartItems.filter(item => item.id !== id));
+          onPress: async () => {
+            try {
+              setIsUpdating(true);
+              
+              // Delete from Firestore
+              const cartItemRef = doc(firestore, 'carts', id);
+              await deleteDoc(cartItemRef);
+              
+              // Update local state
+              setCartItems(cartItems.filter(item => item.id !== id));
+            } catch (error) {
+              console.error('Error removing item:', error);
+              Alert.alert('Error', 'Failed to remove item from cart');
+            } finally {
+              setIsUpdating(false);
+            }
           },
           style: "destructive"
         }
@@ -66,6 +155,104 @@ const CartScreen = ({ navigation }) => {
     );
   };
 
+  // Function to handle checkout
+  const handleCheckout = () => {
+    // Check if user is logged in
+    if (!isLoggedIn) {
+      Alert.alert(
+        'Login Required',
+        'You need to be logged in to checkout',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Login', 
+            onPress: () => navigation.navigate('Login')
+          }
+        ]
+      );
+      return;
+    }
+
+    // Check if cart is empty
+    if (cartItems.length === 0) {
+      Alert.alert('Empty Cart', 'Your cart is empty');
+      return;
+    }
+
+    // Here you would typically navigate to a checkout screen
+    // For now, we'll just show an alert
+    Alert.alert(
+      'Checkout',
+      'Processing your order...',
+      [
+        { 
+          text: 'OK', 
+          onPress: () => createOrder()
+        }
+      ]
+    );
+  };
+
+  // Function to create an order in Firestore
+  const createOrder = async () => {
+    if (!isLoggedIn || cartItems.length === 0) return;
+    
+    try {
+      setIsUpdating(true);
+      
+      // Create order object
+      const orderData = {
+        userId: userData.uid || userData.email.replace(/[.@]/g, '_'),
+        items: cartItems.map(item => ({
+          foodItemId: item.foodItemId,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          options: item.options ? item.options.split(', ') : []
+        })),
+        status: 'pending',
+        totalAmount: total,
+        subtotal: subtotal,
+        tax: tax,
+        deliveryFee: deliveryFee,
+        discount: 0,
+        deliveryAddress: userData.address || '',
+        paymentMethod: 'Credit Card', // Default for now
+        promoCode: '',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+      
+      // Add to Firestore
+      await addDoc(collection(firestore, 'orders'), orderData);
+      
+      // Clear the cart
+      for (const item of cartItems) {
+        await deleteDoc(doc(firestore, 'carts', item.id));
+      }
+      
+      setCartItems([]);
+      
+      Alert.alert(
+        'Order Placed',
+        'Your order has been placed successfully!',
+        [{ text: 'OK', onPress: () => navigation.navigate('Home') }]
+      );
+    } catch (error) {
+      console.error('Error creating order:', error);
+      Alert.alert('Error', 'Failed to place your order. Please try again.');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Function to apply promo code
+  const applyPromoCode = () => {
+    // For now, just show a message
+    Alert.alert('Promo Code', 'This feature will be implemented soon!');
+  };
+
+  // Render cart item component
   const renderCartItem = (item) => (
     <View key={item.id} style={styles.cartItem}>
       <Image source={item.image} style={styles.itemImage} />
@@ -78,6 +265,7 @@ const CartScreen = ({ navigation }) => {
         <TouchableOpacity 
           style={styles.quantityButton}
           onPress={() => updateQuantity(item.id, item.quantity - 1)}
+          disabled={isUpdating}
         >
           <Icon name="remove" size={18} color="#333" />
         </TouchableOpacity>
@@ -85,6 +273,7 @@ const CartScreen = ({ navigation }) => {
         <TouchableOpacity 
           style={styles.quantityButton}
           onPress={() => updateQuantity(item.id, item.quantity + 1)}
+          disabled={isUpdating}
         >
           <Icon name="add" size={18} color="#333" />
         </TouchableOpacity>
@@ -92,11 +281,34 @@ const CartScreen = ({ navigation }) => {
       <TouchableOpacity 
         style={styles.removeButton}
         onPress={() => removeItem(item.id)}
+        disabled={isUpdating}
       >
         <Icon name="trash-outline" size={18} color="#E63946" />
       </TouchableOpacity>
     </View>
   );
+
+  // Loading indicator while fetching cart items
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={() => navigation.goBack()}
+          >
+            <Icon name="arrow-back" size={24} color="#333" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>My Cart</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#E63946" />
+          <Text style={styles.loadingText}>Loading your cart...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -115,6 +327,13 @@ const CartScreen = ({ navigation }) => {
       {cartItems.length > 0 ? (
         <>
           <ScrollView style={styles.cartContainer}>
+            {/* Overlay for updates */}
+            {isUpdating && (
+              <View style={styles.updatingOverlay}>
+                <ActivityIndicator size="large" color="#E63946" />
+              </View>
+            )}
+
             {/* Cart Items */}
             <View style={styles.itemsContainer}>
               {cartItems.map(renderCartItem)}
@@ -126,7 +345,10 @@ const CartScreen = ({ navigation }) => {
                 <Icon name="pricetag-outline" size={20} color="#999" style={styles.promoIcon} />
                 <Text style={styles.promoPlaceholder}>Add promo code</Text>
               </View>
-              <TouchableOpacity style={styles.applyButton}>
+              <TouchableOpacity 
+                style={styles.applyButton} 
+                onPress={applyPromoCode}
+              >
                 <Text style={styles.applyButtonText}>Apply</Text>
               </TouchableOpacity>
             </View>
@@ -162,7 +384,11 @@ const CartScreen = ({ navigation }) => {
 
           {/* Checkout Button */}
           <View style={styles.checkoutContainer}>
-            <TouchableOpacity style={styles.checkoutButton}>
+            <TouchableOpacity 
+              style={styles.checkoutButton}
+              onPress={handleCheckout}
+              disabled={isUpdating}
+            >
               <Text style={styles.checkoutText}>Proceed to Checkout</Text>
               <View style={styles.checkoutPriceContainer}>
                 <Text style={styles.checkoutPrice}>${total.toFixed(2)}</Text>
@@ -213,6 +439,27 @@ const styles = StyleSheet.create({
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+  },
+  updatingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
   },
   cartContainer: {
     flex: 1,
