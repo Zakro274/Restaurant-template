@@ -236,15 +236,6 @@ const DiscoverScreen = ({ navigation }) => {
             </TouchableOpacity>
           )}
         </View>
-        <TouchableOpacity 
-          style={styles.filterButton}
-          onPress={() => {
-            // Reset category filter
-            setActiveCategory(null);
-          }}
-        >
-          <Icon name="options-outline" size={20} color="#333" />
-        </TouchableOpacity>
       </View>
 
       {isLoading ? (
